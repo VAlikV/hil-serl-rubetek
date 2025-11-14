@@ -280,13 +280,16 @@ class GovnoBot():
                                                                               new_point[4], 
                                                                               new_point[5]), orientation_units='deg', get_all=False)
 
-        if self._is_safety(new_point) and (time.time() - self.last_send > 0.11):
-            # await asyncio.to_thread(self._move_robot, new_point_joints)
-            # print('delta',time.time() - last_send)
-            # print("AAAAAAAAAAAAAAAAAAAAAA")
-            thread = threading.Thread(target=self._move_robot, args=(new_point_joints,))
-            thread.start()
-            self.last_send = time.time()
+        if self._is_safety(new_point):
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            if new_point_joints is not None:
+                print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                self.robot.motion.joint.add_new_waypoint(angle_pose=new_point_joints,
+                                                speed=self.ANG_SPEED,
+                                                accel=self.ANG_ACCEL,
+                                                blend=self.BLEND,
+                                                units='deg')
+                self.robot.motion.mode.set('move')
             self.last_point = new_point
 
         while not self.robot.motion.check_waypoint_completion():

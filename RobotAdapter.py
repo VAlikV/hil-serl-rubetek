@@ -24,8 +24,8 @@ class RobotAdapter:
                                 0.0, 0.0, -1.0])
         self.ctrl.set_new_point(self.pos.copy(), self.orient.copy())
 
-        self.start_pos = tool_tcp[0,0:3]
-        self.start_orient = self.orient
+        self.start_pos = tool_tcp[0,0:3].copy()
+        self.start_orient = self.orient.copy()
 
     def observe(self) -> Obs:
         q, dq, tool_tcp, tool_tcp_vel = self.ctrl.get_robot_attr()

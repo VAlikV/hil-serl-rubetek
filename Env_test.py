@@ -21,7 +21,7 @@ T = 1000
 
 while True:
 
-    delta_pos[0] = np.sign(np.sin(2*np.pi*i/T))/1000
+    # delta_pos[0] = np.sign(np.sin(2*np.pi*i/T))/1000
     # t = time.time()
     obs, reward, terminated, truncated, info = env.step(delta_pos)
     # print((time.time()-t)*1000)
@@ -29,12 +29,20 @@ while True:
 
     # print(obs)
 
+    if terminated:
+        break
+
     i += 1
 
     time.sleep(0.01)
 
-# data, addr = self.sock.recvfrom(1024)
-# line = data.decode()
-# numbers = ast.literal_eval(line)
+last_obs, info = env.reset()
+
+print(last_obs)
+
+while True:
+    time.sleep(0.01)
+
+
 
 

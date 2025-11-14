@@ -2,14 +2,21 @@ import gymnasium as gym
 import numpy as np
 import socket
 import time
+from pynput import keyboard
 
 class RealRobotEnv(gym.Env):
     metadata={"render_modes":[]}
+
     def __init__(self, robot_adapter, image_keys=("cam_front","cam_side"), teleop_set=False, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=None, classifier_keys=[]):
         self.robot = robot_adapter
         self.image_keys = image_keys
 
         self.reward_model = reward_model
+
+        listener = keyboard.Listener(on_press=self._on_press,)
+        listener.start()
+
+        self.done = False
 
         # ---- определите пространства наблюдений/действий:
         H, W = 480, 640  # пример; подгоните под свой препроцессинг
@@ -100,6 +107,10 @@ class RealRobotEnv(gym.Env):
             reward = 0.0
             terminated = False
 
+        if self.done:
+            terminated = True
+            self.done = False
+
         truncated = (self._t >= self._max_ep_steps)
         self.last_obs = obs
         self._t += 1
@@ -125,8 +136,14 @@ class RealRobotEnv(gym.Env):
                     delta_pos = message - self.last_pos
                     self.last_pos = message
                     success = True
+                    delta_pos[2] = 0.0
 
         except socket.timeout:
             data, addr = None, None  # или просто continue
 
         return success, delta_pos
+
+    def _on_press(self, key):
+        if key == keyboard.Key.shift:
+            self.done = True
+            # print("Shift is currently pressed")
