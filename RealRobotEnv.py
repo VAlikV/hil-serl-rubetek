@@ -58,11 +58,12 @@ class RealRobotEnv(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         # сделайте reset сцены/объектов/позиции, при необходимости
+        self.robot.reset()
+
         o = self.robot.observe()
         self.last_obs = self._obs_from_robot(o)
         self._t = 0
         info = {}
-        self.robot.reset()
         
         return self.last_obs, info
 
