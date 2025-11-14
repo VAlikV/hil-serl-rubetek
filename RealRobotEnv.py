@@ -1,11 +1,15 @@
 import gymnasium as gym
 import numpy as np
+import socket
+import time
 
 class RealRobotEnv(gym.Env):
     metadata={"render_modes":[]}
-    def __init__(self, robot_adapter, image_keys=("cam_front","cam_side")):
+    def __init__(self, robot_adapter, image_keys=("cam_front","cam_side"), teleop_set=False, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=None, classifier_keys=[]):
         self.robot = robot_adapter
         self.image_keys = image_keys
+
+        self.reward_model = reward_model
 
         # ---- определите пространства наблюдений/действий:
         H, W = 480, 640  # пример; подгоните под свой препроцессинг
@@ -31,6 +35,19 @@ class RealRobotEnv(gym.Env):
         self._t = 0
         self._max_ep_steps = 500
 
+        self.teleop_set = teleop_set
+
+        if teleop_set:
+            self.haptic_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.haptic_sock.bind((teleop_ip, teleop_port))
+            self.haptic_sock.settimeout(0.001)
+
+        self.first = True
+        self.last_pos = np.array([0.0, 0.0, 0.0,
+                                  0.0, -1.0, 0.0,
+                                  -1.0, 0.0, 0.0,
+                                  0.0, 0.0, -1.0])
+
     def _obs_from_robot(self, o):
 
         proprio = np.concatenate([
@@ -45,22 +62,70 @@ class RealRobotEnv(gym.Env):
         self.last_obs = self._obs_from_robot(o)
         self._t = 0
         info = {}
+        self.robot.reset()
+        
         return self.last_obs, info
 
     def step(self, action):
         # action: np.array(6,), а хват — через info["intervene_action"]/внешний канал (см. ниже режимы)
+        # Действие - смещение в декартовой системе (первые 3 учитываются, остальные игнорируются)
+
+        info = {}
+
+        if self.teleop_set:
+            success, message = self._read_teleop()
+
+            if success:
+                # print("SOSI")
+                action = message
+                info["intervene_action"] = action
+
         a = np.asarray(action, dtype=np.float32)
         a_gripper = 0  # 0=open, 1=close, 2=stay (если fixed-gripper — просто игнорим)
+
+        # t = time.time()
         self.robot.apply_action(a, a_gripper)
+        # print((time.time()-t)*1000)
 
         o = self.robot.observe()
         obs = self._obs_from_robot(o)
 
-        # вознаграждение: часто даётся внешним визуал-классификатором; тут — заглушка
-        reward = 0.0
-        terminated = False
+        if self.reward_model is not None:
+            img_dict = {k: o.images[k] for k in self.image_keys}
+            score = self.reward_model(img_dict)    # [0..1]
+            reward = float(score)                  # или 2*score-1, или (score>0.9)*1.0
+            terminated = bool(score > 0.95)        # например, эпизод успешен
+        else:
+            reward = 0.0
+            terminated = False
+
         truncated = (self._t >= self._max_ep_steps)
-        info = {}
         self.last_obs = obs
         self._t += 1
+
+        # вознаграждение: часто даётся внешним визуал-классификатором; тут — заглушка
+        
         return obs, reward, terminated, truncated, info
+    
+    def _read_teleop(self):
+
+        delta_pos = np.array([])
+
+        success = False
+
+        try:
+            data, addr = self.haptic_sock.recvfrom(1024)
+            message = np.array(list(map(float, data.decode()[1:-1].split(","))))
+            if len(message):
+                if self.first:
+                    self.last_pos = message
+                    self.first = False
+                else:
+                    delta_pos = message - self.last_pos
+                    self.last_pos = message
+                    success = True
+
+        except socket.timeout:
+            data, addr = None, None  # или просто continue
+
+        return success, delta_pos

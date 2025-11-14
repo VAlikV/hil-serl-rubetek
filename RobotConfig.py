@@ -1,8 +1,9 @@
-from types import SimpleNamespace
-from .RealRobotEnv import RealRobotEnv
-from .RobotAdapter import RobotAdapter
-from .LowLevelCtrl import LowLevelCtrl   # твой модуль
-from .Camera import make_cameras     # словарь камер
+from RobotAdapter import RobotAdapter
+from Camera import Camera
+from RealRobotEnv import RealRobotEnv
+from Robot import GovnoBot
+from VisualReward import VisualReward
+import numpy as np
 
 class MyRobotConfig:
     def __init__(self):
@@ -24,13 +25,22 @@ class MyRobotConfig:
         self.checkpoint_period = 10_000
         self.buffer_period = 5_000
 
-    def get_environment(self, save_video=False, classifier=True):
-        # fake_env=True при запуске learner, чтобы он не трогал реальное железо
-        # if fake_env:
-        #     # можно вернуть «обёртку-заглушку», которая только валидирует shape’ы
-        #     return DummyRealRobotLikeEnv(self.image_keys)
+    def get_environment(self, fake_env=False, save_video=False, classifier=True):
+
         # реальный робот
-        llc = LowLevelCtrl(...)                     # твой НУ-контроллер
-        cams = make_cameras(self.image_keys, ...)   # {"cam_front": Cam(), ...}
-        robot = RobotAdapter(llc, cams, self.image_keys)
-        return RealRobotEnv(robot, self.image_keys)
+        cameras = {"cam_front": Camera(0),"cam_side": Camera(2)}
+        robot = GovnoBot("10.10.10.10")
+        adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
+        reward_model = None
+        if classifier:
+            # берём один sample_obs из env, чтобы создать classifier (или формируем руками)
+            sample_obs = {
+                k: np.zeros((1, 480, 640, 3), np.uint8) for k in self.image_keys
+            }
+            reward_model = VisualReward(
+                ckpt_dir="classifier_ckpt",
+                sample_observations=sample_obs,
+                classifier_keys=self.image_keys,
+            )
+
+        return RealRobotEnv(robot_adapter=adapter, image_keys=self.image_keys, teleop_set=True, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=reward_model, classifier_keys=self.image_keys)

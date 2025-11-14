@@ -13,6 +13,7 @@ haptic_sock.settimeout(0.001)
 message = np.array([])
 
 while True:
+    t = time.time()
     try:
         data, addr = haptic_sock.recvfrom(1024)
         message = np.array(list(map(float, data.decode()[1:-1].split(","))))
@@ -28,6 +29,8 @@ while True:
     robot.step()
 
     q, dq, tool_tcp, tool_tcp_vel = robot.get_robot_attr()
+
+    print((time.time()-t)*1000)
 
     time.sleep(0.01)
 

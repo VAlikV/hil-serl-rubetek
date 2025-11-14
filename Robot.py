@@ -36,7 +36,7 @@ class GovnoBot():
         self.robot = RobotApi(
             self.IP,
             enable_logger=True,
-            log_std_level=logging.DEBUG,
+            # log_std_level=logging.DEBUG,
             enable_logfile=False
         )
         self.robot.payload.set(mass=0, tcp_mass_center=(0, 0, 0))
@@ -258,6 +258,38 @@ class GovnoBot():
     def stop(self):
         self.robot.motion.mode.set('hold')
     
+    # =======================================================================================
+
+    def set(self, position, orientation):
+        Rot = np.array([orientation[0:3],
+                        orientation[3:6],
+                        orientation[6:9]])
+        
+        position[0] = np.clip(position[0], self.X_MIN, self.X_MAX)
+        position[1] = np.clip(position[1], self.Y_MIN, self.Y_MAX)
+        position[2] = np.clip(position[2], self.Z_MIN, self.Z_MAX)
+
+        r, p ,y = self._get_euler_from_matrix(Rot)
+
+        new_point = np.array([position[0], position[1], position[2], r, p, y])
+
+        new_point_joints = self.robot.motion.kinematics.get_inverse(tcp_pose=(new_point[0], 
+                                                                              new_point[1], 
+                                                                              new_point[2], 
+                                                                              new_point[3], 
+                                                                              new_point[4], 
+                                                                              new_point[5]), orientation_units='deg', get_all=False)
+
+        if self._is_safety(new_point) and (time.time() - self.last_send > 0.11):
+            # await asyncio.to_thread(self._move_robot, new_point_joints)
+            # print('delta',time.time() - last_send)
+            # print("AAAAAAAAAAAAAAAAAAAAAA")
+            thread = threading.Thread(target=self._move_robot, args=(new_point_joints,))
+            thread.start()
+            self.last_send = time.time()
+            self.last_point = new_point
+
+        
 # ===================================================================================================================================================
 # ===================================================================================================================================================
 # ===================================================================================================================================================
