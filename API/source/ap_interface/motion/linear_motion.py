@@ -269,3 +269,132 @@ class LinearMotion:
                 )
             )
         )
+    
+    def jog_once_all_axis(self, jog_directions: JogDirection) -> bool:
+        """
+        Режим 'TCP JOGGING'. Разовая команда кратковременного движения робота
+        по осям. Команда является циклической. Для корректной работы режима
+        необходимо вызывать метод в цикле, с
+        частотой 100 Hz.
+
+        Args:
+            jog_direction: Направление перемещения вдоль оси.
+                '+' — для перемещения в положительном направлении вдоль оси.
+                '-' — для перемещения в отрицательном направлении вдоль оси.
+
+        Returns:
+            True: В случае успешной отправки команды.
+        """
+        axis = ["X", "Y", "Z", "Rx", "Ry", "Rz"]
+
+        jog_template = JogCommandTemplate()
+
+        for i, a in enumerate(axis):
+            validate_literal('axis', a)
+            if jog_directions[i] != "0":
+                validate_literal('math', jog_directions[i])
+                
+                jog_template.var[literal_to_int(a)] = (
+                    literal_to_int(jog_directions[i])
+                )
+        jog_template.mode = Jm.ctrlr_coms_jog_mode_velocity
+        return (
+            self._controller.send(
+                Omm.jog,
+                pack(
+                    JOG_CMD_PACK_FORMAT,
+                    *dataclass_to_tuple(jog_template)
+                )
+            )
+        )
+    
+    # ТЕСТЫ СКРЫТЫХ ВОЗМОЖНОСТЕЙ
+    # def jog_force(self, jog_directions: JogDirection, n) -> bool:
+    #     """
+    #     Режим 'TCP JOGGING'. Разовая команда кратковременного движения робота
+    #     по осям. Команда является циклической. Для корректной работы режима
+    #     необходимо вызывать метод в цикле, с
+    #     частотой 100 Hz.
+
+    #     Args:
+    #         jog_direction: Направление перемещения вдоль оси.
+    #             '+' — для перемещения в положительном направлении вдоль оси.
+    #             '-' — для перемещения в отрицательном направлении вдоль оси.
+
+    #     Returns:
+    #         True: В случае успешной отправки команды.
+    #     """
+    #     axis = ["X", "Y", "Z", "Rx", "Ry", "Rz"]
+
+    #     jog_template = JogCommandTemplate()
+
+    #     for i, a in enumerate(axis):
+    #         validate_literal('axis', a)
+    #         if jog_directions[i] != "0":
+    #             validate_literal('math', jog_directions[i])
+                
+    #             jog_template.force_const[literal_to_int(a)] = (
+    #                 literal_to_int(jog_directions[i])
+    #             )
+
+    #             jog_template.force_en[literal_to_int(a)] = (
+    #                 n[i]
+    #             )
+        
+    #     jog_template.mode = Jm.ctrlr_coms_jog_mode_force
+    #     return (
+    #         self._controller.send(
+    #             Omm.jog,
+    #             pack(
+    #                 JOG_CMD_PACK_FORMAT,
+    #                 *dataclass_to_tuple(jog_template)
+    #             )
+    #         )
+    #     )
+    
+    # def jog_pos(self, jog_directions: JogDirection) -> bool:
+        """
+        Режим 'TCP JOGGING'. Разовая команда кратковременного движения робота
+        по осям. Команда является циклической. Для корректной работы режима
+        необходимо вызывать метод в цикле, с
+        частотой 100 Hz.
+
+        Args:
+            jog_direction: Направление перемещения вдоль оси.
+                '+' — для перемещения в положительном направлении вдоль оси.
+                '-' — для перемещения в отрицательном направлении вдоль оси.
+
+        Returns:
+            True: В случае успешной отправки команды.
+        """
+        axis = ["X", "Y", "Z", "Rx", "Ry", "Rz"]
+
+        jog_template = JogCommandTemplate()
+
+        for i, a in enumerate(axis):
+            validate_literal('axis', a)
+            if jog_directions[i] != "0":
+                validate_literal('math', jog_directions[i])
+                
+                jog_template.var[literal_to_int(a)] = (
+                    literal_to_int(jog_directions[i])
+                )
+
+                jog_template.stiff[literal_to_int(a)] = (
+                    100
+                )
+
+                # jog_template.force_en[literal_to_int(a)] = (
+                #     n[i]
+                # )
+        
+        jog_template.mode = Jm.ctrlr_coms_jog_mode_position
+        return (
+            self._controller.send(
+                Omm.jog,
+                pack(
+                    JOG_CMD_PACK_FORMAT,
+                    *dataclass_to_tuple(jog_template)
+                )
+            )
+        )

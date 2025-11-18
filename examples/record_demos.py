@@ -16,7 +16,7 @@ flags.DEFINE_integer("successes_needed", 20, "Number of successful demos to coll
 def main(_):
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
-    env = config.get_environment(fake_env=False, save_video=False, classifier=True)
+    env = config.get_environment(fake_env=False, save_video=False, classifier=False)
     
     obs, info = env.reset()
     print("Reset done")
@@ -26,11 +26,14 @@ def main(_):
     pbar = tqdm(total=success_needed)
     trajectory = []
     returns = 0
+
+    s = env.action_space.sample().shape
     
     while success_count < success_needed:
-        actions = np.zeros(env.action_space.sample().shape) 
+        actions = np.zeros(s) 
         next_obs, rew, done, truncated, info = env.step(actions)
         returns += rew
+
         if "intervene_action" in info:
             actions = info["intervene_action"]
         transition = copy.deepcopy(
@@ -58,6 +61,8 @@ def main(_):
             trajectory = []
             returns = 0
             obs, info = env.reset()
+            
+        time.sleep(0.01)
             
     if not os.path.exists("./demo_data"):
         os.makedirs("./demo_data")

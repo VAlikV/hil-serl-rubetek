@@ -236,6 +236,40 @@ class JointMotion:
                 *dataclass_to_tuple(jog_template)
             )
         )
+    
+    def jog_once_all_joints(
+        self, jog_directions: JogDirection
+    ) -> bool:
+        """
+        Режим 'JOINT JOGGING'. Разовая команда кратковременного движения робота
+        по моторам. Команда является циклической. Для корректной работы режима
+        необходимо вызывать метод в цикле, с частотой 100 Hz.
+
+        Args:
+            jog_direction: Направление поворота мотора.
+                '+' — для поворота по часовой стрелке.
+                '-' — для поворота против часовой стрелки.
+        Returns:
+            True: В случае успешной отправки команды.
+        """
+
+        jog_template = JointJogCommandTemplate()
+
+        for j in range(6): 
+            validate_index(j, range(JOINT_COUNT))
+            if jog_directions[j] != "0":
+                validate_literal('math', jog_directions[j])
+                jog_template.joints_rotation_directions[j] = literal_to_int(
+                    jog_directions[j]
+                )
+        jog_template.mode = Jm.ctrlr_coms_joint_jog_mode_on
+        return self._controller.send(
+            Omm.joint_jog,
+            pack(
+                CTRLR_JOINT_JOG_CMD_PACK_FORMAT,
+                *dataclass_to_tuple(jog_template)
+            )
+        )
 
     def set_jog_param_in_tcp(self, in_tcp: JogParamInTCP) -> bool:
         """

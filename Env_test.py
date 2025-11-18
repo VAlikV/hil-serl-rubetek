@@ -1,13 +1,14 @@
-from RobotAdapter import RobotAdapter
-from Camera import Camera
-from RealRobotEnv import RealRobotEnv
-from Robot import GovnoBot
+from examples.experiments.rozum_push.RobotAdapter import RobotAdapter
+from examples.experiments.rozum_push.Camera import Camera
+from examples.experiments.rozum_push.RealRobotEnv import RealRobotEnv
+from examples.experiments.rozum_push.Robot import GovnoBot
 
 import numpy as np
 import socket
 import time
+import cv2
 
-cameras = {"cam_front": Camera(0),"cam_side": Camera(2)}
+cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
 robot = GovnoBot("10.10.10.10")
 adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
 env = RealRobotEnv(robot_adapter=adapter, image_keys=["cam_front","cam_side"], teleop_set=True)
@@ -29,12 +30,19 @@ while True:
 
     # print(obs)
 
+    # image_1 = obs["cam_front"]
+    # image_2 = obs["cam_side"]
+
+    # cv2.imshow("cam_front", image_1)
+    # cv2.imshow("cam_side", image_2)
+
     if terminated:
-        break
+        env.reset()
 
     i += 1
 
     time.sleep(0.01)
+    # cv2.waitKey(1) 
 
 last_obs, info = env.reset()
 

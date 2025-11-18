@@ -54,6 +54,7 @@ class EncodingWrapper(nn.Module):
 
         if self.use_proprio:
             # project state to embeddings as well
+            # print(observations)
             state = observations["state"]
             if self.enable_stacking:
                 # Combine stacking and channels into a single dimension

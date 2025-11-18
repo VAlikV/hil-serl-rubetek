@@ -1,16 +1,17 @@
-from RobotAdapter import RobotAdapter
-from Camera import Camera
-from RealRobotEnv import RealRobotEnv
-from Robot import GovnoBot
-from VisualReward import VisualReward
+from .RobotAdapter import RobotAdapter
+from .Camera import Camera
+from .RealRobotEnv import RealRobotEnv
+# from .Robot import GovnoBot
+from API.controller import TaskSpaceJogController
+from .VisualReward import VisualReward
 import numpy as np
 
-class MyRobotConfig:
+class RobotConfig:
     def __init__(self):
         # режимы: 'single-arm-fixed-gripper' | 'single-arm-learned-gripper' | ...
         self.setup_mode = 'single-arm-learned-gripper'
         self.image_keys = ['cam_front','cam_side']
-        self.encoder_type = 'resnet10'     # см. фабрики make_sac_pixel_agent*
+        self.encoder_type = 'resnet-pretrained'     # см. фабрики make_sac_pixel_agent*
         self.discount = 0.99
 
         # буфера/ритмы
@@ -29,7 +30,12 @@ class MyRobotConfig:
 
         # реальный робот
         cameras = {"cam_front": Camera(0),"cam_side": Camera(2)}
-        robot = GovnoBot("10.10.10.10")
+        robot = TaskSpaceJogController(ip="10.10.10.10",
+                                        rate_hz=100,
+                                        velocity=1,
+                                        acceleration=1,
+                                        treshold_position=0.01,
+                                        treshold_angel=1)
         adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
         reward_model = None
         if classifier:
@@ -43,4 +49,4 @@ class MyRobotConfig:
                 classifier_keys=self.image_keys,
             )
 
-        return RealRobotEnv(robot_adapter=adapter, image_keys=self.image_keys, teleop_set=True, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=reward_model, classifier_keys=self.image_keys)
+        return RealRobotEnv(robot_adapter=adapter, image_keys=self.image_keys, teleop_set=True, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=None, classifier_keys=self.image_keys)

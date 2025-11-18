@@ -21,7 +21,7 @@ class RealRobotEnv(gym.Env):
         # ---- определите пространства наблюдений/действий:
         H, W = 480, 640  # пример; подгоните под свой препроцессинг
         obs_space = {
-          "proprio": gym.spaces.Box(
+          "state": gym.spaces.Box(
                         -np.inf, np.inf, 
                         shape=(6 + 6 + 6 + 6, ), 
                         dtype=np.float32),
@@ -61,7 +61,7 @@ class RealRobotEnv(gym.Env):
             o.q, o.dq, o.tcp_pos, o.tcp_vel,
         ]).astype(np.float32)
         imgs = {k: o.images[k] for k in self.image_keys}
-        return {"proprio": proprio, **imgs}
+        return {'state': proprio, **imgs}
 
     def reset(self, *, seed=None, options=None):
         # сделайте reset сцены/объектов/позиции, при необходимости
@@ -109,6 +109,7 @@ class RealRobotEnv(gym.Env):
 
         if self.done:
             terminated = True
+            info["succeed"] = True
             self.done = False
 
         truncated = (self._t >= self._max_ep_steps)
