@@ -8,6 +8,7 @@ class Obs:
     dq: np.ndarray
     tcp_pos: np.ndarray
     tcp_vel: np.ndarray
+    # torque: np.ndarray
     # gripper_pos: float
     timestamp: float
 
@@ -17,14 +18,16 @@ class RobotAdapter:
         self.cams = cameras
         self.image_keys = image_keys
 
+        self.ctrl.start()
+
         q, dq, tcp, tcp_vel, torque = self.ctrl.get_current_info()
 
-        self.pos = tcp[0:3]
+        self.pos = tcp[0:3].copy()
         self.orient = np.array([[1.0, 0.0, 0.0], 
                                 [0.0, -1.0, 0.0], 
                                 [0.0, 0.0, -1.0]])
         
-        self.ctrl.set_new_point(self.pos.copy(), self.orient.copy())
+        self.ctrl.set_target(self.pos.copy(), self.orient.copy())
 
         self.start_pos = tcp[0:3].copy()
         self.start_orient = self.orient.copy()
@@ -32,19 +35,19 @@ class RobotAdapter:
     # ====================================================================================================
 
     def observe(self) -> Obs:
-        q, dq, tcp, tcp_vel, torque = self.ctrl.get_robot_attr()
+        q, dq, tcp, tcp_vel, torque = self.ctrl.get_current_info()
         imgs  = {k: self.cams[k].get_image() for k in self.image_keys}
 
-        return Obs(imgs, q, dq, tcp, tcp_vel, torque, time.time())
+        return Obs(imgs, q, dq, tcp, tcp_vel, time.time())
 
     # ====================================================================================================
 
     def apply_action(self, delta, a_gripper):
 
         # if delta[0:3].any() >= 0.0001:
-        self.pos += delta[0:3]
-        self.ctrl.set_target(self.pos.copy(), self.orient.copy())    # Δx, Δr (roll/pitch/yaw) в рамке ЭЭ
-        self.ctrl.step()
+        self.pos[0:2] += delta[0:2]
+        self.ctrl.set_target(self.pos.copy(), self.orient.copy())
+        # self.ctrl.step()
         # self.ctrl.set_gripper_cmd(a_gripper)
 
     # ====================================================================================================
@@ -57,7 +60,9 @@ class RobotAdapter:
     def reset(self):
         self.ctrl.set_target(self.start_pos, self.start_orient)
 
-        while self._check_reset():
+        self.pos = self.start_pos.copy()
+
+        while not self._check_reset():
             time.sleep(0.001)
     
     # ====================================================================================================
@@ -66,7 +71,8 @@ class RobotAdapter:
 
         tcp = self.ctrl.get_current_tcp()
 
-        if np.abs(self.start_pos - tcp[0:3]).any() >= 0.001:
+        if (np.abs(self.start_pos - tcp[0:3]) >= 0.002).any():
+            print(np.abs(self.start_pos - tcp[0:3]))
             return False
         else:
             return True

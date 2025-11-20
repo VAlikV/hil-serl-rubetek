@@ -29,19 +29,19 @@ class RobotConfig:
     def get_environment(self, fake_env=False, save_video=False, classifier=True):
 
         # реальный робот
-        cameras = {"cam_front": Camera(0),"cam_side": Camera(2)}
+        cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
         robot = TaskSpaceJogController(ip="10.10.10.10",
                                         rate_hz=100,
                                         velocity=1,
                                         acceleration=1,
-                                        treshold_position=0.01,
+                                        treshold_position=0.001,
                                         treshold_angel=1)
         adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
         reward_model = None
         if classifier:
             # берём один sample_obs из env, чтобы создать classifier (или формируем руками)
             sample_obs = {
-                k: np.zeros((1, 480, 640, 3), np.uint8) for k in self.image_keys
+                k: np.zeros((1, 360, 480, 3), np.uint8) for k in self.image_keys
             }
             reward_model = VisualReward(
                 ckpt_dir="classifier_ckpt",

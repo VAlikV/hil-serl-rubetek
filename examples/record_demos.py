@@ -28,11 +28,15 @@ def main(_):
     returns = 0
 
     s = env.action_space.sample().shape
+
+    count = 0
     
     while success_count < success_needed:
         actions = np.zeros(s) 
         next_obs, rew, done, truncated, info = env.step(actions)
         returns += rew
+
+        count += 1
 
         if "intervene_action" in info:
             actions = info["intervene_action"]
@@ -62,8 +66,11 @@ def main(_):
             returns = 0
             obs, info = env.reset()
             
-        time.sleep(0.01)
-            
+        time.sleep(0.1)
+        print(count)
+
+    env.stop()
+    
     if not os.path.exists("./demo_data"):
         os.makedirs("./demo_data")
     uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

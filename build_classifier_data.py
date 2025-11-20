@@ -1,47 +1,65 @@
-import glob, os, pickle as pkl
+import copy
+import os
+from tqdm import tqdm
 import numpy as np
+import pickle as pkl
+import datetime
+from absl import app, flags
+from pynput import keyboard
+import cv2
 
-SRC_DIRS = [
-    "logs/my_robot_run/demo_buffer",   # где лежат transitions_*.pkl для демо/интервенций
-    "logs/my_robot_run/buffer"         # онлайн буфер (если там есть метки)
-]
-DST_DIR = "classifier_data"
-IMAGE_KEYS = ["cam_front", "cam_side"]  # == config.classifier_keys
+# with open('demo_data/for_classifier.pkl', 'rb') as f:
+with open('classifier_data/success_images_2025-11-20_18-32-25.pkl', 'rb') as f:
+    data = pkl.load(f)   
 
-os.makedirs(DST_DIR, exist_ok=True)
-success_samples, failure_samples = [], []
+successes = []
+failures = []
 
-def obs_ok(obs):
-    # изображения должны лежать напрямую по IMAGE_KEYS
-    return all(k in obs and obs[k].dtype==np.uint8 for k in IMAGE_KEYS)
+for i in range(len(data)):
 
-for d in SRC_DIRS:
-    for f in glob.glob(os.path.join(d, "transitions_*.pkl")):
-        transitions = pkl.load(open(f,"rb"))
-        # простой хук: считаем "успех" если последний шаг эпизода имел info["episode"]["r"]>0
-        # (поменяй под свою логику: например, флаг success в info, или ручная фильтрация)
-        # Здесь возьмём последние кадры каждого эпизода по done=True
-        episode = []
-        for tr in transitions:
-            episode.append(tr)
-            if tr.get("dones", False) or (tr.get("masks", 1.0)==0.0):
-                final = episode[-1]
-                if "observations" in final and obs_ok(final["observations"]):
-                    label_is_success = bool(final.get("rewards", 0.0) > 0.5)  # адаптируй под себя!
-                    sample = {
-                        "observations": {k: final["observations"][k] for k in IMAGE_KEYS},
-                        "actions": np.zeros(1, np.float32),  # заглушка, скрипт всё равно заменит
-                    }
-                    if label_is_success:
-                        success_samples.append(sample)
-                    else:
-                        failure_samples.append(sample)
-                episode = []
+    obs = data[i]["observations"]
+    actions = data[i]["actions"]
+    next_obs = data[i]["next_observations"]
+    rew = data[i]["rewards"]
+    done = data[i]["dones"]
 
-# Сохраним порционно
-with open(os.path.join(DST_DIR, "my_success_0.pkl"), "wb") as f:
-    pkl.dump(success_samples, f)
-with open(os.path.join(DST_DIR, "my_failure_0.pkl"), "wb") as f:
-    pkl.dump(failure_samples, f)
+    transition = copy.deepcopy(
+        dict(
+            observations=obs,
+            actions=actions,
+            next_observations=next_obs,
+            rewards=rew,
+            masks=1.0 - done,
+            dones=done,
+        )
+    )
+    
+    image_1 = data[i]["observations"]["cam_front"]
+    image_2 = data[i]["observations"]["cam_side"]
 
-print("success:", len(success_samples), "failure:", len(failure_samples))
+    cv2.imshow("cam_front", image_1)
+    cv2.imshow("cam_side", image_2)
+
+    key = cv2.waitKey(0)
+
+    if key == ord("s"):
+        successes.append(transition)
+    elif key == ord("f"):
+        failures.append(transition)
+
+    print("Успехов: ", len(successes), " Неуспехов: ", len(failures))
+    print("Всего: ", i, " / ", len(data))
+
+if not os.path.exists("./classifier_data"):
+    os.makedirs("./classifier_data")
+uuid = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+file_name = f"./classifier_data/success_images_{uuid}.pkl"
+with open(file_name, "wb") as f:
+    pkl.dump(successes, f)
+    print(f"saved {len(successes)} successful transitions to {file_name}")
+
+file_name = f"./classifier_data/failure_images_{uuid}.pkl"
+with open(file_name, "wb") as f:
+    pkl.dump(failures, f)
+    print(f"saved {len(failures)} failure transitions to {file_name}")
+

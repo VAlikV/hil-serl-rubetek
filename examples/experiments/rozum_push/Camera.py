@@ -2,7 +2,7 @@ import cv2
 import threading
 
 class Camera:
-    def __init__(self, number, img_size=(640, 480)):
+    def __init__(self, number, img_size=(480, 360)):
         self.cam = cv2.VideoCapture(number)
         if not self.cam.isOpened():
             raise RuntimeError("Не удалось открыть камеру")

@@ -34,8 +34,8 @@ class RealRobotEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(obs_space)
 
         # Действия: 6D ΔЭЭ + дискретный хват через «hybrid»-режим (см. ниже)
-        self.action_space = gym.spaces.Box(low=np.array([-2.0]*6, dtype=np.float32),
-                                           high=np.array([+2.0]*6, dtype=np.float32),
+        self.action_space = gym.spaces.Box(low=np.array([-2.0]*2, dtype=np.float32),
+                                           high=np.array([+2.0]*2, dtype=np.float32),
                                            dtype=np.float32)
 
         self.last_obs = None
@@ -48,6 +48,7 @@ class RealRobotEnv(gym.Env):
             self.haptic_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.haptic_sock.bind((teleop_ip, teleop_port))
             self.haptic_sock.settimeout(0.001)
+            self.haptic_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024)
 
         self.first = True
         self.last_pos = np.array([0.0, 0.0, 0.0,
@@ -78,6 +79,8 @@ class RealRobotEnv(gym.Env):
         # action: np.array(6,), а хват — через info["intervene_action"]/внешний канал (см. ниже режимы)
         # Действие - смещение в декартовой системе (первые 3 учитываются, остальные игнорируются)
 
+        act = action.copy()
+
         info = {}
 
         if self.teleop_set:
@@ -85,10 +88,10 @@ class RealRobotEnv(gym.Env):
 
             if success:
                 # print("SOSI")
-                action = message
-                info["intervene_action"] = action
+                act = message[0:2]
+                info["intervene_action"] = act
 
-        a = np.asarray(action, dtype=np.float32)
+        a = np.asarray(act, dtype=np.float32)
         a_gripper = 0  # 0=open, 1=close, 2=stay (если fixed-gripper — просто игнорим)
 
         # t = time.time()
@@ -148,3 +151,6 @@ class RealRobotEnv(gym.Env):
         if key == keyboard.Key.shift:
             self.done = True
             # print("Shift is currently pressed")
+
+    def stop(self):
+        self.robot.emergency_stop()

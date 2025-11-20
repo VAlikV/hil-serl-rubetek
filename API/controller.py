@@ -218,7 +218,7 @@ class TaskSpaceJogController:
 
         self.robot = RobotApi(
             ip,
-            enable_logger=True,
+            enable_logger=False,
             # log_std_level=logging.DEBUG,
             enable_logfile=False,
             show_std_traceback=True
