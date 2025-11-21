@@ -1,0 +1,69 @@
+[project]
+name = "hil-serl-rubetek"
+version = "0.1.0"
+description = "HIL-SERL robotics, robot infra, and RL launch utilities"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = ["tf-keras>=2.19.0,<3"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pixi.workspace]
+channels = ["conda-forge", "nvidia"]
+platforms = ["linux-64"]
+
+[tool.pixi.system-requirements]
+cuda = "12.6"
+
+[tool.pixi.dependencies]
+python = "3.10.*"
+pip = "*"
+absl-py = ">=0.12.0"
+chex = ">=0.1.85"
+defusedxml = "*"
+distrax = "==0.1.5"
+dm-tree = ">=0.1.8"
+einops = ">=0.6.1"
+flask = "*"
+flax = ">=0.8.0"
+gym = ">=0.26"
+gymnasium = "==0.29.1"
+hidapi = "*"
+imageio = ">=2.31.1"
+jax = "==0.4.35"
+jaxlib = { version = "==0.4.35", build = "*cuda*" }
+lz4 = "*"
+matplotlib = "*"
+ml-collections = ">=0.1.0"
+moviepy = ">=1.0.3"
+natsort = "*"
+numpy = "1.26.*"
+opencv = "*"
+optax = ">=0.1.5"
+pre-commit = "==3.3.3"
+pymodbus = "==2.5.3"
+pynput = "*"
+pyquaternion = "*"
+pyyaml = "*"
+pyzmq = "*"
+requests = "*"
+rospkg = "*"
+scipy = "1.11.*"
+tqdm = ">=4.60.0"
+typing_extensions = "*"
+
+[tool.pixi.pypi-dependencies]
+agentlace = { git = "https://github.com/youliangtan/agentlace.git", rev = "cf2c337c5e3694cdbfc14831b239bd657bc4894d" }
+API = { path = "third_party/RC10_control", editable = true }
+pyrealsense2 = "==2.56.4.9191"
+pyspacemouse = "*"
+serl_launcher = { path = "serl_launcher", editable = true }
+serl_robot_infra = { path = "serl_robot_infra", editable = true }
+tensorflow-probability = "==0.25.0"
+tensorflow = { version = "==2.19.0", extras = ["and-cuda"] }
+protobuf = ">=5,<6"
+ml-dtypes = ">=0.5.1,<1"
+wandb = "==0.22.3"

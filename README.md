@@ -23,37 +23,24 @@ HIL-SERL provides a set of libraries, env wrappers, and examples to train RL pol
   - [Citation](#citation)
 
 ## Installation
-1. **Setup Conda Environment:**
-    create an environment with
-    ```bash
-    conda create -n hilserl python=3.10
-    ```
+Everything is managed by [pixi](https://pixi.sh) using the `pyproject.toml`/`pixi.lock` in this repo. The environment ships with CUDA-enabled JAX (built against CUDA 12.6, compatible with NVIDIA driver 580+/CUDA 13) plus TensorFlow, TensorFlow Probability, WandB, and editable installs of `serl_launcher` and `serl_robot_infra`.
 
-2. **Install Jax as follows:**
-    - For CPU (not recommended):
-        ```bash
-        pip install --upgrade "jax[cpu]"
-        ```
+1. Install pixi if you do not already have it (`curl -fsSL https://pixi.sh/install.sh | bash`).
+2. From the repository root, create and enter the environment:
+   ```bash
+   pixi shell
+   ```
+   The first run will download/resolve everything; subsequent runs simply drop you into the ready-to-use shell.
+3. (Optional) Verify accelerators:
+   ```bash
+   pixi run python - <<'PY'
+   import jax, tensorflow as tf
+   print('jax devices:', jax.devices())
+   print('tf GPUs:', tf.config.list_physical_devices('GPU'))
+   PY
+   ```
 
-    - For GPU:
-        ```bash
-        pip install --upgrade "jax[cuda12_pip]==0.4.35" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-        ```
-
-    - For TPU
-        ```bash
-        pip install --upgrade "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-        ```
-    - See the [Jax Github page](https://github.com/google/jax) for more details on installing Jax.
-
-3. **Install the serl_launcher**
-    ```bash
-    cd serl_launcher
-    pip install -e .
-    pip install -r requirements.txt
-    ```
-
-4. **Install for serl_robot_infra** Follow the [README](./serl_robot_infra/README.md) in `serl_robot_infra` for installation and basic robot operation instructions. This contains the instruction for installing the impendence-based [serl_franka_controllers](https://github.com/rail-berkeley/serl_franka_controllers). After the installation, you should be able to run the robot server, interact with the gym `franka_env` (hardware).
+For robot hardware setup follow [serl_robot_infra/README.md](./serl_robot_infra/README.md) from inside the pixi shell; no extra pip/requirements/setup steps are needed.
 
 ## Overview and Code Structure
 
@@ -105,4 +92,3 @@ If you use this code for your research, please cite our paper:
       primaryClass={cs.RO}
 }
 ```
-

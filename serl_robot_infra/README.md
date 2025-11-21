@@ -14,11 +14,7 @@ There is a Flask server which sends commands to the robot via ROS. There is a gy
 
 2. Then install the `serl_franka_controllers` from https://github.com/rail-berkeley/serl_franka_controllers
 
-3. Then, install this package and it's dependencies.
-    ```bash
-    conda activate hilserl
-    pip install -e .
-    ```
+3. Bring up the Python environment from the repo root using `pixi shell`. Dependencies (including an editable install of `serl_robot_infra`) are already declared in `pyproject.toml`, so no additional `pip install` steps are required.
 
 ### Usage
 To start using the robot, first power on the robot (small switch on the back of robot control box on the floor). Calibrate the end-effector payload in the browser interface before proceeding to ensure accuarcy of the impedance controller. Then, unlock the robot, enable FCI, and put into execution mode (FR3 only). 
