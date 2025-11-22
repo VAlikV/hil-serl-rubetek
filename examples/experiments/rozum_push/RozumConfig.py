@@ -1,6 +1,7 @@
 from .RobotAdapter import RobotAdapter
 from .Camera import Camera
-from .RealRobotEnv import RealRobotEnv, FakeEnv
+from .RealRobotEnv import RealRobotEnv
+from .FakeRobotEnv import FakeRobotEnv
 # from .Robot import GovnoBot
 from API.controller import TaskSpaceJogController
 from .VisualReward import VisualReward
@@ -32,7 +33,7 @@ class RobotConfig:
         # реальный робот
 
         if fake_env:
-            env = FakeEnv(image_keys=self.image_keys)
+            env = FakeRobotEnv(image_keys=self.image_keys)
         else:
             cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
             robot = TaskSpaceJogController(ip="10.10.10.10",

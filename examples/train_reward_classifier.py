@@ -22,12 +22,13 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("exp_name", "rozum_push", "Name of experiment corresponding to folder.")
 flags.DEFINE_integer("num_epochs", 35, "Number of training epochs.")
 flags.DEFINE_integer("batch_size", 32, "Batch size.")
+flags.DEFINE_boolean("fake_env", True, "Use fake environment instead of the real robot.")
 
 
 def main(_):
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
-    env = config.get_environment(fake_env=True, save_video=False, classifier=False)
+    env = config.get_environment(fake_env=FLAGS.fake_env, save_video=False, classifier=False)
 
     devices = jax.local_devices()
     sharding = jax.sharding.PositionalSharding(devices)

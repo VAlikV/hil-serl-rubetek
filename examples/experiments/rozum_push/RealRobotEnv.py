@@ -155,26 +155,3 @@ class RealRobotEnv(gym.Env):
     def stop(self):
         self.robot.emergency_stop()
 
-
-class FakeEnv(gym.Env):
-    def __init__(self, image_keys=("cam_front","cam_side")):
-
-        self.image_keys = image_keys
-       
-        H, W = 360, 480  # пример; подгоните под свой препроцессинг
-        obs_space = {
-        "state": gym.spaces.Box(
-                        -np.inf, np.inf, 
-                        shape=(6 + 6 + 6 + 6, ), 
-                        dtype=np.float32),
-                        
-                    **{k: gym.spaces.Box(
-                        0, 255,
-                        shape=(H, W, 3), 
-                        dtype=np.uint8) for k in self.image_keys},
-        }
-        self.observation_space = gym.spaces.Dict(obs_space)
-
-        self.action_space = gym.spaces.Box(low=np.array([-2.0]*2, dtype=np.float32),
-                                        high=np.array([+2.0]*2, dtype=np.float32),
-                                        dtype=np.float32)

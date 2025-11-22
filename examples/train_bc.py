@@ -32,6 +32,7 @@ flags.DEFINE_string("bc_checkpoint_path", None, "Path to save checkpoints.")
 flags.DEFINE_integer("eval_n_trajs", 0, "Number of trajectories to evaluate.")
 flags.DEFINE_integer("train_steps", 20_000, "Number of pretraining steps.")
 flags.DEFINE_bool("save_video", False, "Save video of the evaluation.")
+flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
 
 flags.DEFINE_boolean(
@@ -132,8 +133,9 @@ def main(_):
     assert config.batch_size % num_devices == 0
     assert FLAGS.exp_name in CONFIG_MAPPING, "Experiment folder not found."
     eval_mode = FLAGS.eval_n_trajs > 0
+    use_fake_env = FLAGS.fake_env or (not eval_mode)
     env = config.get_environment(
-        fake_env=not eval_mode,
+        fake_env=use_fake_env,
         save_video=FLAGS.save_video,
         classifier=True,
     )

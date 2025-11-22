@@ -43,6 +43,7 @@ flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
 flags.DEFINE_integer("eval_checkpoint_step", 0, "Step to evaluate the checkpoint.")
 flags.DEFINE_integer("eval_n_trajs", 0, "Number of trajectories to evaluate.")
 flags.DEFINE_integer("pretrain_steps", 20_000, "Number of pretraining steps.")
+flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
 flags.DEFINE_boolean(
     "debug", False, "Debug mode."
@@ -332,7 +333,6 @@ def learner(rng, agent: BCAgent, demo_buffer, wandb_logger=None):
 
 
 
-##############################################################################
 
 
 def main(_):
@@ -345,7 +345,8 @@ def main(_):
     rng, sampling_rng = jax.random.split(rng)
 
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
-    env = config.get_environment(fake_env=FLAGS.learner, 
+    use_fake_env = FLAGS.fake_env or FLAGS.learner
+    env = config.get_environment(fake_env=use_fake_env, 
                                  save_video=False, 
                                  classifier=FLAGS.actor)
     env = RecordEpisodeStatistics(env)
