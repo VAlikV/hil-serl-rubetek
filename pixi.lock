@@ -402,6 +402,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ad/98/3ce5f6e2086d91b0c51b38ae7ff591109e7da2bb25fe1a12eec0cdbaa494/wandb-0.22.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/6e/78/833b2808793c1619835edb1a4e17a023d5d625f4f97ff25ffff986d1f472/zmq-0.0.0.tar.gz
+      - pypi: ./
       - pypi: ./serl_launcher
       - pypi: ./serl_robot_infra
       - pypi: ./third_party/RC10_control
@@ -1679,6 +1680,14 @@ packages:
   - pkg:pypi/hidapi?source=hash-mapping
   size: 104667
   timestamp: 1761495923083
+- pypi: ./
+  name: hil-serl-rubetek
+  version: 0.1.0
+  sha256: 0abea1285c31c54ef7b0bd36fbca50d9009b1802d7325b9f8bac63b711873e7c
+  requires_dist:
+  - tf-keras>=2.19.0,<3
+  requires_python: '>=3.10'
+  editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
   sha256: 6ad78a180576c706aabeb5b4c8ceb97c0cb25f1e112d76495bff23e3779948ba
   md5: 0a802cb9888dd14eeefc611f05c40b6e
