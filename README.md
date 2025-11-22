@@ -15,11 +15,10 @@ HIL-SERL provides a set of libraries, env wrappers, and examples to train RL pol
 🎬: [HIL-SERL video](https://www.youtube.com/watch?v=GuD_-zhJgbs)
 
 **Table of Contents**
-- [HIL-SERL: Precise and Dexterous Robotic Manipulation via Human-in-the-Loop Reinforcement Learning](#serl-a-software-suite-for-sample-efficient-robotic-reinforcement-learning)
+- [HIL-SERL: Precise and Dexterous Robotic Manipulation via Human-in-the-Loop Reinforcement Learning](#hil-serl-precise-and-dexterous-robotic-manipulation-via-human-in-the-loop-reinforcement-learning)
   - [Installation](#installation)
   - [Overview and Code Structure](#overview-and-code-structure)
   - [Run with Franka Arm](#run-with-franka-arm)
-  <!-- - [Contribution](#contribution) -->
   - [Citation](#citation)
 
 ## Installation
@@ -36,7 +35,6 @@ Everything is managed by [pixi](https://pixi.sh) using the `pyproject.toml`/`pix
    pixi run python - <<'PY'
    import jax, tensorflow as tf
    print('jax devices:', jax.devices())
-   print('tf GPUs:', tf.config.list_physical_devices('GPU'))
    PY
    ```
 

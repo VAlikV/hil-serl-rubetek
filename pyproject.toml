@@ -67,7 +67,8 @@ pyspacemouse = "*"
 serl_launcher = { path = "serl_launcher", editable = true }
 serl_robot_infra = { path = "serl_robot_infra", editable = true }
 tensorflow-probability = "==0.25.0"
-tensorflow = { version = "==2.19.0", extras = ["and-cuda"] }
+# tensorflow = { version = "==2.19.0", extras = ["and-cuda"] }
+tensorflow = "==2.19.0"
 protobuf = ">=5,<6"
 ml-dtypes = ">=0.5.1,<1"
 wandb = "==0.22.3"

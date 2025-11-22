@@ -38,8 +38,8 @@ class EncodingWrapper(nn.Module):
             if not is_encoded:
                 if self.enable_stacking:
                     # Combine stacking and channels into a single dimension
-                    if len(image.shape) == 4:
-                        image = rearrange(image, "T H W C -> H W (T C)")
+                    # if len(image.shape) == 4:
+                    #     image = rearrange(image, "T H W C -> H W (T C)")
                     if len(image.shape) == 5:
                         image = rearrange(image, "B T H W C -> B H W (T C)")
 

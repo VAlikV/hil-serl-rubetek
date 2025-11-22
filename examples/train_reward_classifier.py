@@ -7,6 +7,7 @@ import flax.linen as nn
 from flax.training import checkpoints
 import numpy as np
 import optax
+import cv2
 from tqdm import tqdm
 from absl import app, flags
 
@@ -30,7 +31,7 @@ def main(_):
     config = CONFIG_MAPPING[FLAGS.exp_name]()
     env = config.get_environment(fake_env=FLAGS.fake_env, save_video=False, classifier=False)
 
-    devices = jax.local_devices()
+    devices = [jax.local_devices()[0]]
     sharding = jax.sharding.PositionalSharding(devices)
     
     # Create buffer for positive transitions
@@ -93,9 +94,17 @@ def main(_):
     neg_sample = next(neg_iterator)
     sample = concat_batches(pos_sample, neg_sample, axis=0)
 
+    def resize_obs(observations, size=(128, 128)):
+        observations = observations.copy()
+        for k in config.classifier_keys:
+            arr = np.asarray(observations[k])
+            arr = np.stack([cv2.resize(img, size[::-1]) for img in arr], axis=0)
+            observations = observations.copy(add_or_replace={k: arr})
+        return observations
+
     rng, key = jax.random.split(rng)
     classifier = create_classifier(key, 
-                                   sample["observations"], 
+                                   resize_obs(sample["observations"]),
                                    config.classifier_keys,
                                    )
 
@@ -104,7 +113,7 @@ def main(_):
             observations = observations.copy(
                 add_or_replace={
                     pixel_key: batched_random_crop(
-                        observations[pixel_key], rng, padding=4, num_batch_dims=2
+                        observations[pixel_key], rng, padding=4, num_batch_dims=1
                     )
                 }
             )
@@ -134,6 +143,11 @@ def main(_):
         # Merge and create labels
         batch = concat_batches(
             pos_sample, neg_sample, axis=0
+        )
+        batch = batch.copy(
+            add_or_replace={
+                "observations": resize_obs(batch["observations"])
+            }
         )
         rng, key = jax.random.split(rng)
         obs = data_augmentation_fn(key, batch["observations"])

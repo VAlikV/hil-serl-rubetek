@@ -7,14 +7,25 @@ from pynput import keyboard
 class RealRobotEnv(gym.Env):
     metadata={"render_modes":[]}
 
-    def __init__(self, robot_adapter, image_keys=("cam_front","cam_side"), teleop_set=False, teleop_ip="127.0.0.1", teleop_port=8081, reward_model=None, classifier_keys=[]):
+    def __init__(
+        self,
+        robot_adapter,
+        image_keys=("cam_front","cam_side"),
+        teleop_set=False,
+        teleop_ip="127.0.0.1",
+        teleop_port=8081,
+        reward_model=None,
+        classifier_keys=[],
+        enable_keyboard_listener=True,
+    ):
         self.robot = robot_adapter
         self.image_keys = image_keys
 
         self.reward_model = reward_model
 
-        listener = keyboard.Listener(on_press=self._on_press,)
-        listener.start()
+        if enable_keyboard_listener:
+            listener = keyboard.Listener(on_press=self._on_press,)
+            listener.start()
 
         self.done = False
 
@@ -154,4 +165,3 @@ class RealRobotEnv(gym.Env):
 
     def stop(self):
         self.robot.emergency_stop()
-

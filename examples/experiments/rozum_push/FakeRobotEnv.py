@@ -105,4 +105,5 @@ class FakeRobotEnv(RealRobotEnv):
             teleop_set=teleop_set,
             reward_model=reward_model,
             classifier_keys=classifier_keys or [],
+            enable_keyboard_listener=False,
         )
