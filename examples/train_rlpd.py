@@ -49,7 +49,7 @@ flags.DEFINE_boolean("save_video", False, "Save video.")
 flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
 flags.DEFINE_boolean(
-    "debug", False, "Debug mode."
+    "debug", True, "Debug mode."
 )  # debug mode will disable wandb logging
 
 
@@ -470,6 +470,8 @@ def main(_):
                     demo_buffer.insert(transition)
         print_green(f"demo buffer size: {len(demo_buffer)}")
         print_green(f"online buffer size: {len(replay_buffer)}")
+
+        # print(demo_buffer.sample(1, ))
 
         if FLAGS.checkpoint_path is not None and os.path.exists(
             os.path.join(FLAGS.checkpoint_path, "buffer")

@@ -1,0 +1,13 @@
+python examples/train_rlpd.py \
+  --exp_name=rozum_push \
+  --learner \
+  --checkpoint_path=checkpoints/rozum_push \
+  --demo_path=demo_data/demo2.pkl \
+  --seed=42 \
+  --fake_env=True
+
+  python examples/train_rlpd.py \
+  --exp_name=rozum_push \
+  --actor \
+  --checkpoint_path=checkpoints/rozum_push \
+  --seed=42

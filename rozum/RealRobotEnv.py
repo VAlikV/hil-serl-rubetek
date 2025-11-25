@@ -3,6 +3,7 @@ import numpy as np
 import socket
 import time
 from pynput import keyboard
+import copy
 
 class RealRobotEnv(gym.Env):
     metadata={"render_modes":[]}
@@ -17,7 +18,11 @@ class RealRobotEnv(gym.Env):
         reward_model=None,
         classifier_keys=[],
         enable_keyboard_listener=True,
+        fake_env=False
     ):
+        
+        self.hz = 10
+        
         self.robot = robot_adapter
         self.image_keys = image_keys
 
@@ -29,32 +34,35 @@ class RealRobotEnv(gym.Env):
 
         self.done = False
 
-        # ---- определите пространства наблюдений/действий:
-        H, W = 360, 480  # пример; подгоните под свой препроцессинг
-        obs_space = {
-          "state": gym.spaces.Box(
-                        -np.inf, np.inf, 
-                        shape=(6 + 6 + 6 + 6, ), 
-                        dtype=np.float32),
-                        
-                    **{k: gym.spaces.Box(
-                        0, 255,
-                        shape=(H, W, 3), 
-                        dtype=np.uint8) for k in self.image_keys},
-        }
-        self.observation_space = gym.spaces.Dict(obs_space)
-
-        # Действия: 6D ΔЭЭ + дискретный хват через «hybrid»-режим (см. ниже)
+        self.action_scale = 100
         self.action_space = gym.spaces.Box(low=np.array([-2.0]*2, dtype=np.float32),
                                            high=np.array([+2.0]*2, dtype=np.float32),
                                            dtype=np.float32)
 
+        H, W = 360, 480
+        self.observation_space = gym.spaces.Dict(
+            {
+            "state": gym.spaces.Dict(
+                {
+                    "joints_pos": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                    "joints_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                    "tcp_pos": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                    "tcp_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                }
+            ),
+            "images": gym.spaces.Dict({key: gym.spaces.Box(0, 255, shape=(H, W, 3), dtype=np.uint8) for key in self.image_keys})
+            }
+        )
+        
         self.last_obs = None
+
         self._t = 0
-        self._max_ep_steps = 500
+        self._max_ep_steps = 2000
+
+        if fake_env:
+            return
 
         self.teleop_set = teleop_set
-
         if teleop_set:
             self.haptic_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.haptic_sock.bind((teleop_ip, teleop_port))
@@ -66,17 +74,24 @@ class RealRobotEnv(gym.Env):
                                   0.0, -1.0, 0.0,
                                   -1.0, 0.0, 0.0,
                                   0.0, 0.0, -1.0])
+        
+    # ========================================================================================
 
     def _obs_from_robot(self, o):
 
-        proprio = np.concatenate([
-            o.q, o.dq, o.tcp_pos, o.tcp_vel,
-        ]).astype(np.float32)
+        proprio = {"joints_pos": o.q, 
+                   "joints_vel": o.dq,
+                   "tcp_pos": o.tcp_pos,
+                   "tcp_vel": o.tcp_vel}
+
         imgs = {k: o.images[k] for k in self.image_keys}
-        return {'state': proprio, **imgs}
+
+        return copy.deepcopy({'state': proprio, "images": imgs})
+    
+    # ========================================================================================
 
     def reset(self, *, seed=None, options=None):
-        # сделайте reset сцены/объектов/позиции, при необходимости
+
         self.robot.reset()
 
         o = self.robot.observe()
@@ -85,10 +100,12 @@ class RealRobotEnv(gym.Env):
         info = {}
         
         return self.last_obs, info
+    
+    # ========================================================================================
 
     def step(self, action):
-        # action: np.array(6,), а хват — через info["intervene_action"]/внешний канал (см. ниже режимы)
-        # Действие - смещение в декартовой системе (первые 3 учитываются, остальные игнорируются)
+
+        start_time = time.time()
 
         act = action.copy()
 
@@ -98,25 +115,22 @@ class RealRobotEnv(gym.Env):
             success, message = self._read_teleop()
 
             if success:
-                # print("SOSI")
-                act = message[0:2]
+                act = message[0:2]*self.action_scale
                 info["intervene_action"] = act
 
-        a = np.asarray(act, dtype=np.float32)
-        a_gripper = 0  # 0=open, 1=close, 2=stay (если fixed-gripper — просто игнорим)
+        a = np.asarray(act, dtype=np.float32)/self.action_scale
+        a_gripper = 0
 
-        # t = time.time()
         self.robot.apply_action(a, a_gripper)
-        # print((time.time()-t)*1000)
 
         o = self.robot.observe()
         obs = self._obs_from_robot(o)
 
         if self.reward_model is not None:
             img_dict = {k: o.images[k] for k in self.image_keys}
-            score = self.reward_model(img_dict)    # [0..1]
-            reward = float(score)                  # или 2*score-1, или (score>0.9)*1.0
-            terminated = bool(score > 0.95)        # например, эпизод успешен
+            score = self.reward_model(img_dict)
+            reward = float(score)              
+            terminated = bool(score > 0.95)    
         else:
             reward = 0.0
             terminated = False
@@ -130,9 +144,12 @@ class RealRobotEnv(gym.Env):
         self.last_obs = obs
         self._t += 1
 
-        # вознаграждение: часто даётся внешним визуал-классификатором; тут — заглушка
+        dt = time.time() - start_time
+        time.sleep(max(0, (1.0 / self.hz) - dt))
         
-        return obs, reward, terminated, truncated, info
+        return obs.copy(), reward, terminated, truncated, info
+    
+    # ========================================================================================
     
     def _read_teleop(self):
 
@@ -157,11 +174,15 @@ class RealRobotEnv(gym.Env):
             data, addr = None, None  # или просто continue
 
         return success, delta_pos
+    
+    # ========================================================================================
 
     def _on_press(self, key):
         if key == keyboard.Key.shift:
             self.done = True
             # print("Shift is currently pressed")
+        
+    # ========================================================================================
 
     def stop(self):
         self.robot.emergency_stop()

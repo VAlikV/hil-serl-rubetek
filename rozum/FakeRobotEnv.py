@@ -4,7 +4,7 @@ from typing import Dict, Iterable, Tuple
 
 import numpy as np
 
-from examples.experiments.rozum_push.RealRobotEnv import RealRobotEnv
+from rozum.RealRobotEnv import RealRobotEnv
 
 
 @dataclass

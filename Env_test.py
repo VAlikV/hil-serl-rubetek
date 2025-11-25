@@ -1,7 +1,6 @@
-from examples.experiments.rozum_push.RobotAdapter import RobotAdapter
-from examples.experiments.rozum_push.Camera import Camera
-from examples.experiments.rozum_push.RealRobotEnv import RealRobotEnv
-from examples.experiments.rozum_push.Robot import GovnoBot
+from rozum.RobotAdapter import RobotAdapter
+from rozum.Camera import Camera
+from rozum.RealRobotEnv import RealRobotEnv
 from API.controller import TaskSpaceJogController
 
 import numpy as np
@@ -9,7 +8,7 @@ import socket
 import time
 import cv2
 
-cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
+cameras = {"cam_front": Camera(4),"cam_side": Camera(2)}
 robot = TaskSpaceJogController(ip="10.10.10.10",
                                         rate_hz=100,
                                         velocity=1,
@@ -37,8 +36,8 @@ while True:
 
     # print(obs)
 
-    image_1 = obs["cam_front"]
-    image_2 = obs["cam_side"]
+    image_1 = obs["images"]["cam_front"]
+    image_2 = obs["images"]["cam_side"]
 
     cv2.imshow("cam_front", image_1)
     cv2.imshow("cam_side", image_2)

@@ -11,13 +11,13 @@ from experiments.mappings import CONFIG_MAPPING
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("exp_name", None, "Name of experiment corresponding to folder.")
-flags.DEFINE_integer("successes_needed", 20, "Number of successful demos to collect.")
+flags.DEFINE_integer("successes_needed", 10, "Number of successful demos to collect.")
 flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
 def main(_):
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
-    env = config.get_environment(fake_env=FLAGS.fake_env, save_video=False, classifier=False)
+    env = config.get_environment(fake_env=FLAGS.fake_env, save_video=False, classifier=True)
     
     obs, info = env.reset()
     print("Reset done")
@@ -36,6 +36,8 @@ def main(_):
         actions = np.zeros(s) 
         next_obs, rew, done, truncated, info = env.step(actions)
         returns += rew
+
+        print(rew)
 
         count += 1
 
@@ -67,7 +69,6 @@ def main(_):
             returns = 0
             obs, info = env.reset()
             
-        time.sleep(0.1)
         print(count)
 
     env.stop()
