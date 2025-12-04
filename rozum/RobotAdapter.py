@@ -58,9 +58,11 @@ class RobotAdapter:
     # ====================================================================================================
 
     def reset(self):
-        self.ctrl.set_target(self.start_pos, self.start_orient)
+        self.reset_pos = self.start_pos.copy()
+        self.reset_pos[0:2] += np.random.uniform(-0.03, 0.03, size=2)
+        self.ctrl.set_target(self.reset_pos, self.start_orient)
 
-        self.pos = self.start_pos.copy()
+        self.pos = self.reset_pos.copy()
 
         while not self._check_reset():
             time.sleep(0.001)
@@ -71,8 +73,8 @@ class RobotAdapter:
 
         tcp = self.ctrl.get_current_tcp()
 
-        if (np.abs(self.start_pos - tcp[0:3]) >= 0.002).any():
-            print(np.abs(self.start_pos - tcp[0:3]))
+        if (np.abs(self.reset_pos - tcp[0:3]) >= 0.002).any():
+            print(np.abs(self.reset_pos - tcp[0:3]))
             return False
         else:
             return True

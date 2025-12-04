@@ -13,6 +13,7 @@ import copy
 import pickle as pkl
 from gymnasium.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from natsort import natsorted
+import argparse
 
 from serl_launcher.agents.continuous.sac import SACAgent
 from serl_launcher.agents.continuous.sac_hybrid_single import SACAgentHybridSingleArm
@@ -34,24 +35,40 @@ from serl_launcher.data.data_store import MemoryEfficientReplayBufferDataStore
 
 from experiments.mappings import CONFIG_MAPPING
 
-FLAGS = flags.FLAGS
+# FLAGS = flags.FLAGS
 
-flags.DEFINE_string("exp_name", None, "Name of experiment corresponding to folder.")
-flags.DEFINE_integer("seed", 42, "Random seed.")
-flags.DEFINE_boolean("learner", False, "Whether this is a learner.")
-flags.DEFINE_boolean("actor", False, "Whether this is an actor.")
-flags.DEFINE_string("ip", "localhost", "IP address of the learner.")
-flags.DEFINE_multi_string("demo_path", None, "Path to the demo data.")
-flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
-flags.DEFINE_integer("eval_checkpoint_step", 0, "Step to evaluate the checkpoint.")
-flags.DEFINE_integer("eval_n_trajs", 0, "Number of trajectories to evaluate.")
-flags.DEFINE_boolean("save_video", False, "Save video.")
-flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
+# flags.DEFINE_string("exp_name", None, "Name of experiment corresponding to folder.")
+# flags.DEFINE_integer("seed", 42, "Random seed.")
+# flags.DEFINE_boolean("learner", False, "Whether this is a learner.")
+# flags.DEFINE_boolean("actor", False, "Whether this is an actor.")
+# flags.DEFINE_string("ip", "localhost", "IP address of the learner.")
+# flags.DEFINE_multi_string("demo_path", None, "Path to the demo data.")
+# flags.DEFINE_string("checkpoint_path", None, "Path to save checkpoints.")
+# flags.DEFINE_integer("eval_checkpoint_step", 0, "Step to evaluate the checkpoint.")
+# flags.DEFINE_integer("eval_n_trajs", 0, "Number of trajectories to evaluate.")
+# flags.DEFINE_boolean("save_video", False, "Save video.")
+# flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
-flags.DEFINE_boolean(
-    "debug", True, "Debug mode."
-)  # debug mode will disable wandb logging
+# flags.DEFINE_boolean(
+#     "debug", True, "Debug mode."
+# )  # debug mode will disable wandb logging
 
+
+FLAGS = argparse.Namespace(
+    exp_name="rozum_push",
+    seed=42,
+    learner=False,
+    actor=False,
+    ip="localhost",
+    demo_path=None,
+    checkpoint_path=None,
+    eval_checkpoint_step=0,
+    eval_n_trajs=0,
+    save_video=0,
+    fake_env=False,
+
+    debug=True
+)
 
 devices = jax.local_devices()
 num_devices = len(devices)
@@ -91,6 +108,7 @@ def actor(agent, data_store, intvn_data_store, env, sampling_rng):
                     argmax=False,
                     seed=key
                 )
+
                 actions = np.asarray(jax.device_get(actions))
 
                 next_obs, reward, done, truncated, info = env.step(actions)
@@ -359,7 +377,7 @@ def learner(rng, agent, replay_buffer, demo_buffer, wandb_logger=None):
 ##############################################################################
 
 
-def main(_):
+def main():
     global config
     config = CONFIG_MAPPING[FLAGS.exp_name]()
 
@@ -461,17 +479,42 @@ def main(_):
         )
 
         assert FLAGS.demo_path is not None
-        for path in FLAGS.demo_path:
-            with open(path, "rb") as f:
-                transitions = pkl.load(f)
-                for transition in transitions:
-                    if 'infos' in transition and 'grasp_penalty' in transition['infos']:
-                        transition['grasp_penalty'] = transition['infos']['grasp_penalty']
-                    demo_buffer.insert(transition)
+        # for path in FLAGS.demo_path:
+        path = FLAGS.demo_path
+        with open(path, "rb") as f:
+            transitions = pkl.load(f)
+            for transition in transitions:
+                if 'infos' in transition and 'grasp_penalty' in transition['infos']:
+                    transition['grasp_penalty'] = transition['infos']['grasp_penalty']
+                demo_buffer.insert(transition)
         print_green(f"demo buffer size: {len(demo_buffer)}")
         print_green(f"online buffer size: {len(replay_buffer)}")
 
-        # print(demo_buffer.sample(1, ))
+        ###############################################
+        #  BC WARM-UP: обучаем политику на демонстрациях
+        ###############################################
+        print_green("Starting BC warm-up...")
+
+        demo_iterator_bc = demo_buffer.get_iterator(
+            sample_args={
+                "batch_size": config.batch_size,
+                "pack_obs_and_next_obs": True,
+            },
+            device=sharding.replicate(),
+        )
+
+        BC_STEPS = 1000
+
+        for i in tqdm.tqdm(range(BC_STEPS), desc="BC warm-up"):
+            batch = next(demo_iterator_bc)
+
+            agent, update_info = agent.update(
+                batch,
+                networks_to_update=frozenset({"actor"})
+            )
+
+        print_green("Finished BC warm-up!")
+        ###############################################
 
         if FLAGS.checkpoint_path is not None and os.path.exists(
             os.path.join(FLAGS.checkpoint_path, "buffer")
@@ -529,4 +572,30 @@ def main(_):
 
 
 if __name__ == "__main__":
-    app.run(main)
+    # app.run(main)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--exp_name", default="rozum_push")
+    parser.add_argument("--seed", default=42)
+    parser.add_argument("--learner", default=False)
+    parser.add_argument("--actor", default=False)
+    parser.add_argument("--ip", default="localhost")
+    parser.add_argument("--demo_path", default=None)
+    parser.add_argument("--checkpoint_path", default=None)
+    parser.add_argument("--eval_checkpoint_step", default=0)
+    parser.add_argument("--eval_n_trajs", default=0)
+    parser.add_argument("--save_video", default=0)
+    parser.add_argument("--fake_env", default=False)
+
+    p = parser.parse_args()
+    FLAGS.exp_name = p.exp_name
+    FLAGS.seed = p.seed
+    FLAGS.learner = p.learner
+    FLAGS.actor = p.actor
+    FLAGS.ip = p.ip
+    FLAGS.demo_path = p.demo_path
+    FLAGS.checkpoint_path = p.checkpoint_path
+    FLAGS.eval_checkpoint_step = p.eval_checkpoint_step
+    FLAGS.eval_n_trajs = p.eval_n_trajs
+    FLAGS.save_video = p.save_video
+    FLAGS.fake_env = p.fake_env
+    main()

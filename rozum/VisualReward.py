@@ -7,11 +7,13 @@ class VisualReward:
     def __init__(self, ckpt_dir, sample_observations, classifier_keys):
         rng = jax.random.PRNGKey(0)
         rng, key = jax.random.split(rng)
+
         self.classifier = create_classifier(
             key,
             sample_observations,
             classifier_keys,
         )
+
         self.classifier = checkpoints.restore_checkpoint(ckpt_dir, self.classifier)
         self.classifier_keys = classifier_keys
 

@@ -8,8 +8,8 @@ from absl import app, flags
 from pynput import keyboard
 import cv2
 
-# with open('demo_data/for_classifier.pkl', 'rb') as f:
-with open('classifier_data/success_images_2025-11-20_18-32-25.pkl', 'rb') as f:
+with open('demo_data/for_class2.pkl', 'rb') as f:
+# with open('classifier_data/success_images_2025-11-20_18-32-25.pkl', 'rb') as f:
     data = pkl.load(f)   
 
 successes = []
@@ -29,13 +29,16 @@ for i in range(len(data)):
             actions=actions,
             next_observations=next_obs,
             rewards=rew,
-            masks=1.0 - done,
+            masks=1.0 - done,            
             dones=done,
         )
     )
     
-    image_1 = data[i]["observations"]["cam_front"]
-    image_2 = data[i]["observations"]["cam_side"]
+    image_1 = data[i]["observations"]["cam_front"][0]
+    image_2 = data[i]["observations"]["cam_side"][0]
+
+    image_1 = cv2.resize(image_1, (256, 256))
+    image_2 = cv2.resize(image_2, (256, 256))
 
     cv2.imshow("cam_front", image_1)
     cv2.imshow("cam_side", image_2)

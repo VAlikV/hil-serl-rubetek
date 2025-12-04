@@ -8,7 +8,7 @@ import socket
 import time
 import cv2
 
-cameras = {"cam_front": Camera(4),"cam_side": Camera(2)}
+cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
 robot = TaskSpaceJogController(ip="10.10.10.10",
                                         rate_hz=100,
                                         velocity=1,
@@ -39,11 +39,17 @@ while True:
     image_1 = obs["images"]["cam_front"]
     image_2 = obs["images"]["cam_side"]
 
+    # image_1 = cv2.resize(image_1, (118, 118))
+    # image_2 = cv2.resize(image_2, (118, 118))
+
     cv2.imshow("cam_front", image_1)
     cv2.imshow("cam_side", image_2)
 
     if terminated:
         env.reset()
+
+    print(reward)
+    print(obs["state"]["tcp_pos"])
 
     i += 1
 

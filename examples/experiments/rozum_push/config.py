@@ -15,14 +15,30 @@ class RobotConfig(DefaultTrainingConfig):
     def __init__(self):
         self.setup_mode = 'single-arm-fixed-gripper'
 
-        self.proprio_keys = ["joints_pos", "joints_vel", "tcp_pos", "tcp_vel"]
+        # self.proprio_keys = ["joints_pos", "joints_vel", "tcp_pos", "tcp_vel"]
+        self.proprio_keys = ["tcp_pos", "tcp_vel"]
         self.image_keys = ['cam_front','cam_side']
         self.classifier_keys = ['cam_front','cam_side']
 
     def get_environment(self, fake_env=False, save_video=False, classifier=True):
 
         if not fake_env:
-            cameras = {"cam_front": Camera(4),"cam_side": Camera(2)}
+
+            reward_model = None
+
+            if classifier:
+
+                sample_obs = {
+                    k: np.zeros((1, 128, 128, 3), np.uint8) for k in self.image_keys
+                }
+
+                reward_model = VisualReward(
+                    ckpt_dir="/home/valikv/Desktop/Robotics/hil-serl-rubetek/classifier_ckpt",
+                    sample_observations=sample_obs,
+                    classifier_keys=self.classifier_keys,
+                )
+
+            cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
             robot = TaskSpaceJogController(ip="10.10.10.10",
                                             rate_hz=100,
                                             velocity=1,
@@ -30,20 +46,6 @@ class RobotConfig(DefaultTrainingConfig):
                                             treshold_position=0.001,
                                             treshold_angel=1)
             adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
-
-            reward_model = None
-
-            if classifier:
-
-                sample_obs = {
-                    k: np.zeros((1, 360, 480, 3), np.uint8) for k in self.image_keys
-                }
-
-                reward_model = VisualReward(
-                    ckpt_dir="/home/valikv/Desktop/Robotics/hil-serl-rubetek/classifier_ckpt",
-                    sample_observations=sample_obs,
-                    classifier_keys=self.image_keys,
-                )
             
             env = RealRobotEnv(robot_adapter=adapter, 
                                 image_keys=self.image_keys, 

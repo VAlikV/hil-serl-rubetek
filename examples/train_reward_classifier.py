@@ -10,6 +10,7 @@ import optax
 import cv2
 from tqdm import tqdm
 from absl import app, flags
+import argparse
 
 from serl_launcher.data.data_store import ReplayBuffer
 from serl_launcher.utils.train_utils import concat_batches
@@ -19,14 +20,20 @@ from serl_launcher.networks.reward_classifier import create_classifier
 from experiments.mappings import CONFIG_MAPPING
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string("exp_name", "rozum_push", "Name of experiment corresponding to folder.")
-flags.DEFINE_integer("num_epochs", 35, "Number of training epochs.")
-flags.DEFINE_integer("batch_size", 32, "Batch size.")
-flags.DEFINE_boolean("fake_env", True, "Use fake environment instead of the real robot.")
+# FLAGS = flags.FLAGS
+# flags.DEFINE_string("exp_name", "rozum_push", "Name of experiment corresponding to folder.")
+# flags.DEFINE_integer("num_epochs", 35, "Number of training epochs.")
+# flags.DEFINE_integer("batch_size", 32, "Batch size.")
+# flags.DEFINE_boolean("fake_env", True, "Use fake environment instead of the real robot.")
 
+FLAGS = argparse.Namespace(
+    exp_name="rozum_push",
+    num_epochs=35,
+    batch_size=32,
+    fake_env=True
+)
 
-def main(_):
+def main():
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
     env = config.get_environment(fake_env=FLAGS.fake_env, save_video=False, classifier=False)
@@ -42,6 +49,8 @@ def main(_):
         include_label=True,
     )
 
+    print(env.observation_space)
+
     success_paths = glob.glob(os.path.join(os.getcwd(), "classifier_data", "*success*.pkl"))
     for path in success_paths:
         success_data = pkl.load(open(path, "rb"))
@@ -50,8 +59,8 @@ def main(_):
                 continue
             trans["labels"] = 1
             trans['actions'] = env.action_space.sample()
+
             pos_buffer.insert(trans)
-            
     pos_iterator = pos_buffer.get_iterator(
         sample_args={
             "batch_size": FLAGS.batch_size // 2,
@@ -93,18 +102,12 @@ def main(_):
     pos_sample = next(pos_iterator)
     neg_sample = next(neg_iterator)
     sample = concat_batches(pos_sample, neg_sample, axis=0)
-
-    def resize_obs(observations, size=(128, 128)):
-        observations = observations.copy()
-        for k in config.classifier_keys:
-            arr = np.asarray(observations[k])
-            arr = np.stack([cv2.resize(img, size[::-1]) for img in arr], axis=0)
-            observations = observations.copy(add_or_replace={k: arr})
-        return observations
+    
+    print(sample["observations"]["cam_side"].shape)
 
     rng, key = jax.random.split(rng)
     classifier = create_classifier(key, 
-                                   resize_obs(sample["observations"]),
+                                   sample["observations"],
                                    config.classifier_keys,
                                    )
 
@@ -113,7 +116,7 @@ def main(_):
             observations = observations.copy(
                 add_or_replace={
                     pixel_key: batched_random_crop(
-                        observations[pixel_key], rng, padding=4, num_batch_dims=1
+                        observations[pixel_key], rng, padding=4, num_batch_dims=2
                     )
                 }
             )
@@ -144,11 +147,11 @@ def main(_):
         batch = concat_batches(
             pos_sample, neg_sample, axis=0
         )
-        batch = batch.copy(
-            add_or_replace={
-                "observations": resize_obs(batch["observations"])
-            }
-        )
+        # batch = batch.copy(
+        #     add_or_replace={
+        #         "observations": resize_obs(batch["observations"])
+        #     }
+        # )
         rng, key = jax.random.split(rng)
         obs = data_augmentation_fn(key, batch["observations"])
         batch = batch.copy(
@@ -174,4 +177,17 @@ def main(_):
     
 
 if __name__ == "__main__":
-    app.run(main)
+    # app.run(main)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--exp_name", default="rozum_push")
+    parser.add_argument("--num_epochs", default=50)
+    parser.add_argument("--batch_size", default=32)
+    parser.add_argument("--fake_env", default=True)
+
+    p = parser.parse_args()
+    FLAGS.exp_name = p.exp_name
+    FLAGS.num_epochs = p.num_epochs
+    FLAGS.batch_size = p.batch_size
+    FLAGS.fake_env = p.fake_env
+    main()
+

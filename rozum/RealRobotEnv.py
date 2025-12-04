@@ -39,13 +39,14 @@ class RealRobotEnv(gym.Env):
                                            high=np.array([+2.0]*2, dtype=np.float32),
                                            dtype=np.float32)
 
-        H, W = 360, 480
+        # H, W = 360, 480
+        H, W = 128, 128
         self.observation_space = gym.spaces.Dict(
             {
             "state": gym.spaces.Dict(
                 {
-                    "joints_pos": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
-                    "joints_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                    # "joints_pos": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
+                    # "joints_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
                     "tcp_pos": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
                     "tcp_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
                 }
@@ -57,7 +58,7 @@ class RealRobotEnv(gym.Env):
         self.last_obs = None
 
         self._t = 0
-        self._max_ep_steps = 2000
+        self._max_ep_steps = 300
 
         if fake_env:
             return
@@ -79,9 +80,12 @@ class RealRobotEnv(gym.Env):
 
     def _obs_from_robot(self, o):
 
-        proprio = {"joints_pos": o.q, 
-                   "joints_vel": o.dq,
-                   "tcp_pos": o.tcp_pos,
+        # proprio = {"joints_pos": o.q, 
+        #            "joints_vel": o.dq,
+        #            "tcp_pos": o.tcp_pos,
+        #            "tcp_vel": o.tcp_vel}
+        
+        proprio = {"tcp_pos": o.tcp_pos,
                    "tcp_vel": o.tcp_vel}
 
         imgs = {k: o.images[k] for k in self.image_keys}
@@ -129,8 +133,12 @@ class RealRobotEnv(gym.Env):
         if self.reward_model is not None:
             img_dict = {k: o.images[k] for k in self.image_keys}
             score = self.reward_model(img_dict)
-            reward = float(score)              
-            terminated = bool(score > 0.95)    
+            reward = round(score)
+            terminated = bool(reward > 0.95)
+            # terminated = False
+
+            if terminated: info["succeed"] = True
+
         else:
             reward = 0.0
             terminated = False
@@ -140,7 +148,14 @@ class RealRobotEnv(gym.Env):
             info["succeed"] = True
             self.done = False
 
+        if not terminated:
+            if ((obs['state']["tcp_pos"][0] <= -0.02) and ((obs['state']["tcp_pos"][0] >= -0.1))) \
+            and ((obs['state']["tcp_pos"][1] <= 0.65) and (obs['state']["tcp_pos"][1] >= 0.55)):
+                terminated = True
+                reward = -3
+
         truncated = (self._t >= self._max_ep_steps)
+        if truncated: reward = -1
         self.last_obs = obs
         self._t += 1
 

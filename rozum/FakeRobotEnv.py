@@ -24,7 +24,7 @@ class FakeRobotAdapter:
         image_keys: Iterable[str] = ("cam_front", "cam_side"),
         noise_std: float = 5e-4,
         seed: int | None = None,
-        image_shape: Tuple[int, int, int] = (360, 480, 3),
+        image_shape: Tuple[int, int, int] = (128, 128, 3),
     ):
         self.cams = cameras or {}
         self.image_keys = tuple(image_keys)
