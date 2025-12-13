@@ -393,7 +393,6 @@ environments:
       - pypi: ./
       - pypi: ./serl_launcher
       - pypi: ./serl_robot_infra
-      - pypi: ./third_party/RC10_control
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -512,15 +511,6 @@ packages:
   purls: []
   size: 2706396
   timestamp: 1718551242397
-- pypi: ./third_party/RC10_control
-  name: api
-  version: 0.0.1
-  sha256: 721a0e697a620c42cf24b2574b00d522a7cf92aa009af08b766e5589260ef2d9
-  requires_dist:
-  - numpy
-  - scipy
-  requires_python: '>=3.9'
-  editable: true
 - pypi: https://files.pythonhosted.org/packages/2b/03/13dde6512ad7b4557eb792fbcf0c653af6076b81e5941d36ec61f7ce6028/astunparse-1.6.3-py2.py3-none-any.whl
   name: astunparse
   version: 1.6.3
