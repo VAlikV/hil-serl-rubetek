@@ -6,17 +6,25 @@ import pickle as pkl
 import datetime
 from absl import app, flags
 import time
+import argparse
 
 from experiments.mappings import CONFIG_MAPPING
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string("exp_name", None, "Name of experiment corresponding to folder.")
-flags.DEFINE_integer("successes_needed", 20, "Number of successful demos to collect.")
+# FLAGS = flags.FLAGS
+# flags.DEFINE_string("exp_name", "rozum_push", "Name of experiment corresponding to folder.")
+# flags.DEFINE_integer("successes_needed", 10, "Number of successful demos to collect.")
+# flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
-def main(_):
+FLAGS = argparse.Namespace(
+    exp_name="rozum_push",
+    successes_needed=25,
+    fake_env=False
+)
+
+def main():
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
-    env = config.get_environment(fake_env=False, save_video=False, classifier=False)
+    env = config.get_environment(fake_env=False, save_video=False, classifier=True)
     
     obs, info = env.reset()
     print("Reset done")
@@ -35,6 +43,8 @@ def main(_):
         actions = np.zeros(s) 
         next_obs, rew, done, truncated, info = env.step(actions)
         returns += rew
+
+        print(rew)
 
         count += 1
 
@@ -66,8 +76,7 @@ def main(_):
             returns = 0
             obs, info = env.reset()
             
-        time.sleep(0.1)
-        print(count)
+        # print(count)
 
     env.stop()
     
@@ -79,5 +88,16 @@ def main(_):
         pkl.dump(transitions, f)
         print(f"saved {success_needed} demos to {file_name}")
 
+# if __name__ == "__main__":
+#     app.run(main)
+
 if __name__ == "__main__":
-    app.run(main)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--exp_name", default="rozum_push")
+    parser.add_argument("--successes_needed", default=50)
+    parser.add_argument("--fake_env", default=False)
+    p = parser.parse_args()
+    FLAGS.exp_name = p.exp_name
+    FLAGS.successes_needed = p.successes_needed
+    FLAGS.fake_env = p.fake_env
+    main()
