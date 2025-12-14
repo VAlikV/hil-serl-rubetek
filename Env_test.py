@@ -1,7 +1,6 @@
-from rozum.RobotAdapter import RobotAdapter
-from rozum.Camera import Camera
-from rozum.RealRobotEnv import RealRobotEnv
-from API.controller import TaskSpaceJogController
+from kuka.RobotAdapter import RobotAdapter
+from kuka.Camera import Camera
+from kuka.RealRobotEnv import RealRobotEnv
 
 import numpy as np
 import socket
@@ -9,14 +8,8 @@ import time
 import cv2
 
 cameras = {"cam_front": Camera(2),"cam_side": Camera(4)}
-robot = TaskSpaceJogController(ip="10.10.10.10",
-                                        rate_hz=100,
-                                        velocity=1,
-                                        acceleration=1,
-                                        treshold_position=0.001,
-                                        treshold_angel=1)
+adapter = RobotAdapter(own_ip="127.0.0.1", own_port=8084, robot_ip="127.0.0.1", robot_port=8080, cameras=cameras, image_keys=["cam_front","cam_side"])
 
-adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
 env = RealRobotEnv(robot_adapter=adapter, image_keys=["cam_front","cam_side"], teleop_set=True)
 
 delta_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
