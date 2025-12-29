@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import numpy as np, time
 from .RobotSocket import RobotSocket
+from .Gripper import Gripper
 
 @dataclass
 class Obs:
@@ -12,13 +13,16 @@ class Obs:
     timestamp: float
 
 class RobotAdapter:
-    def __init__(self, own_ip, own_port, robot_ip, robot_port, cameras, image_keys=("cam_front","cam_side")):
+    def __init__(self, own_ip, own_port, robot_ip, robot_port, cameras, image_keys=("cam_front","cam_side"), gripper="/dev/ttyUSB0"):
 
         
         self.cams = cameras
         self.image_keys = image_keys
 
         self.robot_socket = RobotSocket(own_ip, own_port, robot_ip, robot_port)
+
+        self.gripper = Gripper(device=gripper, boudrate=115200, timeout=1)
+        self.gripper.send(0)
 
         self.pos, self.orient = self.robot_socket.readState()
 
@@ -48,6 +52,7 @@ class RobotAdapter:
 
         self.pos[0:3] += delta[0:3]
         self.robot_socket.sendCommand(self.pos.copy(), self.orient.copy())
+        self.gripper.send(a_gripper)
 
     # ====================================================================================================
 

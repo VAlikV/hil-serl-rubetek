@@ -33,10 +33,11 @@ class RealRobotEnv(gym.Env):
             listener.start()
 
         self.done = False
+        self.gripper_state = 1
 
         self.action_scale = 100
-        self.action_space = gym.spaces.Box(low=np.array([-2.0]*3, dtype=np.float32),
-                                           high=np.array([+2.0]*3, dtype=np.float32),
+        self.action_space = gym.spaces.Box(low=np.array([-1.0]*4, dtype=np.float32),
+                                           high=np.array([+1.0]*4, dtype=np.float32),
                                            dtype=np.float32)
 
         # H, W = 360, 480
@@ -49,6 +50,7 @@ class RealRobotEnv(gym.Env):
                     # "joints_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
                     "tcp_pos": gym.spaces.Box(-np.inf, np.inf, shape=(3,)),
                     "tcp_vel": gym.spaces.Box(-np.inf, np.inf, shape=(3,)),
+                    "gripper_state":gym.spaces.Box(-1, 1, shape=(1,))
                 }
             ),
             "images": gym.spaces.Dict({key: gym.spaces.Box(0, 255, shape=(H, W, 3), dtype=np.uint8) for key in self.image_keys})
@@ -81,7 +83,8 @@ class RealRobotEnv(gym.Env):
     def _obs_from_robot(self, o):
         
         proprio = {"tcp_pos": o.tcp_pos,
-                   "tcp_vel": o.tcp_vel}
+                   "tcp_vel": o.tcp_vel,
+                   "gripper_state":self.gripper_state}
 
         imgs = {k: o.images[k] for k in self.image_keys}
 
@@ -114,13 +117,13 @@ class RealRobotEnv(gym.Env):
             success, message = self._read_teleop()
 
             if success:
-                act = message[0:3]*self.action_scale
+                act = message[0:4]*self.action_scale
                 info["intervene_action"] = act
 
         a = np.asarray(act, dtype=np.float32)/self.action_scale
-        a_gripper = 0
+        self.gripper_state = a[3]
 
-        self.robot.apply_action(a, a_gripper)
+        self.robot.apply_action(a[0:3], self.gripper_state)
 
         o = self.robot.observe()
         obs = self._obs_from_robot(o)
@@ -170,6 +173,7 @@ class RealRobotEnv(gym.Env):
         try:
             data, addr = self.haptic_sock.recvfrom(1024)
             message = np.array(list(map(float, data.decode()[1:-1].split(","))))
+            message = np.append(message, self.gripper_state)
             if len(message):
                 if self.first:
                     self.last_pos = message
@@ -189,6 +193,12 @@ class RealRobotEnv(gym.Env):
     def _on_press(self, key):
         if key == keyboard.Key.shift:
             self.done = True
+
+        if key == "o":
+            self.gripper_state = 1
+        
+        if key == "c":
+            self.gripper_state = -1
             # print("Shift is currently pressed")
         
     # ========================================================================================
