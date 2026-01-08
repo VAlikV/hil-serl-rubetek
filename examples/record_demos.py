@@ -16,7 +16,7 @@ from experiments.mappings import CONFIG_MAPPING
 # flags.DEFINE_boolean("fake_env", False, "Use fake environment instead of the real robot.")
 
 FLAGS = argparse.Namespace(
-    exp_name="rozum_push",
+    exp_name="kuka_pinhole",
     successes_needed=25,
     fake_env=False
 )
@@ -24,7 +24,7 @@ FLAGS = argparse.Namespace(
 def main():
     assert FLAGS.exp_name in CONFIG_MAPPING, 'Experiment folder not found.'
     config = CONFIG_MAPPING[FLAGS.exp_name]()
-    env = config.get_environment(fake_env=False, save_video=False, classifier=True)
+    env = config.get_environment(fake_env=False, save_video=False, classifier=False)
     
     obs, info = env.reset()
     print("Reset done")
@@ -93,7 +93,7 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_name", default="rozum_push")
+    parser.add_argument("--exp_name", default="kuka_pinhole")
     parser.add_argument("--successes_needed", default=50)
     parser.add_argument("--fake_env", default=False)
     p = parser.parse_args()

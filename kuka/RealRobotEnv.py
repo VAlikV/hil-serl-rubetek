@@ -96,6 +96,12 @@ class RealRobotEnv(gym.Env):
 
     def reset(self, *, seed=None, options=None):
 
+        zero = np.array([0,0,0])
+
+        self.robot.apply_action(zero, 1)
+
+        time.sleep(0.5)
+
         self.robot.reset()
 
         o = self.robot.observe()

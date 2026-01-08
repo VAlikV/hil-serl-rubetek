@@ -2,7 +2,8 @@
 # from experiments.usb_pickup_insertion.config import TrainConfig as USBPickupInsertionTrainConfig
 # from experiments.object_handover.config import TrainConfig as ObjectHandoverTrainConfig
 # from experiments.egg_flip.config import TrainConfig as EggFlipTrainConfig
-from .rozum_push.config import RobotConfig
+# from .rozum_push.config import RobotConfig
+from .kuka_pinhole.config import KukaPinHoleConfig
 
 CONFIG_MAPPING = {
                 # "ram_insertion": RAMInsertionTrainConfig,
@@ -10,5 +11,6 @@ CONFIG_MAPPING = {
                 # "object_handover": ObjectHandoverTrainConfig,
                 # "egg_flip": EggFlipTrainConfig,
 
-                "rozum_push": RobotConfig,
+                # "rozum_push": RobotConfig,
+                "kuka_pinhole": KukaPinHoleConfig,
                }

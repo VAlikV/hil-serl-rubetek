@@ -27,7 +27,7 @@ from experiments.mappings import CONFIG_MAPPING
 # flags.DEFINE_boolean("fake_env", True, "Use fake environment instead of the real robot.")
 
 FLAGS = argparse.Namespace(
-    exp_name="rozum_push",
+    exp_name="kuka_pinhole",
     num_epochs=35,
     batch_size=32,
     fake_env=True
@@ -179,9 +179,9 @@ def main():
 if __name__ == "__main__":
     # app.run(main)
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp_name", default="rozum_push")
+    parser.add_argument("--exp_name", default="kuka_pinhole")
     parser.add_argument("--num_epochs", default=50)
-    parser.add_argument("--batch_size", default=32)
+    parser.add_argument("--batch_size", default=8)
     parser.add_argument("--fake_env", default=True)
 
     p = parser.parse_args()

@@ -8,14 +8,14 @@ from absl import app, flags
 from pynput import keyboard
 import cv2
 
-with open('demo_data/for_class2.pkl', 'rb') as f:
+with open('demo_data/for_class1.pkl', 'rb') as f:
 # with open('classifier_data/success_images_2025-11-20_18-32-25.pkl', 'rb') as f:
     data = pkl.load(f)   
 
 successes = []
 failures = []
 
-for i in range(len(data)):
+for i in range(12, len(data)):
 
     obs = data[i]["observations"]
     actions = data[i]["actions"]

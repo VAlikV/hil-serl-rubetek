@@ -88,6 +88,8 @@ class RobotAdapter:
             time.sleep(0.001)
 
         self.pos, self.orient = self.robot_socket.readState()
+
+        time.sleep(2)
     
     # ====================================================================================================
 
