@@ -34,6 +34,8 @@ class RealRobotEnv(gym.Env):
 
         self.done = False
         self.gripper_state = 1
+        self.teleop_gripper_state = 1
+        self.teleop_gripper_flag = False
 
         self.action_scale = 100
         self.action_space = gym.spaces.Box(low=np.array([-1.0]*4, dtype=np.float32),
@@ -108,54 +110,28 @@ class RealRobotEnv(gym.Env):
     def step(self, action):
 
         start_time = time.time()
-
         act = action.copy()
-
         info = {}
 
-        if self.teleop_set:
-            success, message = self._read_teleop()
+        # -----------------------------
 
-            if success:
-                act = message[0:4]*self.action_scale
-                info["intervene_action"] = act
+        act, info = self._pre_step(act, info)
 
-        a = np.asarray(act, dtype=np.float32)/self.action_scale
-        self.gripper_state = a[3]
+        self.gripper_state = act[3]
+        self.robot.apply_action(act[0:3], self.gripper_state)
 
-        self.robot.apply_action(a[0:3], self.gripper_state)
+        # -----------------------------
 
         o = self.robot.observe()
         obs = self._obs_from_robot(o)
 
-        if self.reward_model is not None:
-            img_dict = {k: o.images[k] for k in self.image_keys}
-            score = self.reward_model(img_dict)
-            reward = round(score)
-            terminated = bool(reward > 0.95)
-            # terminated = False
+        # -----------------------------
 
-            if terminated: info["succeed"] = True
+        reward = self._get_reward(obs)
 
-        else:
-            reward = 0.0
-            terminated = False
+        reward, terminated, truncated, info = self._get_dones(reward, obs, info)
 
-        if self.done:
-            terminated = True
-            info["succeed"] = True
-            self.done = False
-
-        if not terminated:
-            if ((obs['state']["tcp_pos"][0] <= -0.02) and ((obs['state']["tcp_pos"][0] >= -0.1))) \
-            and ((obs['state']["tcp_pos"][1] <= 0.65) and (obs['state']["tcp_pos"][1] >= 0.55)):
-                terminated = True
-                reward = -3
-
-        truncated = (self._t >= self._max_ep_steps)
-        if truncated: reward = -1
-        self.last_obs = obs
-        self._t += 1
+        # -----------------------------
 
         dt = time.time() - start_time
         time.sleep(max(0, (1.0 / self.hz) - dt))
@@ -173,7 +149,9 @@ class RealRobotEnv(gym.Env):
         try:
             data, addr = self.haptic_sock.recvfrom(1024)
             message = np.array(list(map(float, data.decode()[1:-1].split(","))))
-            message = np.append(message, self.gripper_state)
+            # message = np.append(message, self.teleop_gripper_state)
+
+            print("Message: ", message)
             if len(message):
                 if self.first:
                     self.last_pos = message
@@ -191,17 +169,85 @@ class RealRobotEnv(gym.Env):
     # ========================================================================================
 
     def _on_press(self, key):
-        if key == keyboard.Key.shift:
-            self.done = True
 
-        if key == "o":
-            self.gripper_state = 1
-        
-        if key == "c":
-            self.gripper_state = -1
-            # print("Shift is currently pressed")
+        if hasattr(key, "char"):
+            if key.char == 'o':
+                self.teleop_gripper_state = 1
+                self.teleop_gripper_flag = True
+            
+            if key.char == "c":
+                self.teleop_gripper_state = -1
+                self.teleop_gripper_flag = True
+        else:
+            if key == keyboard.Key.shift:
+                self.done = True
         
     # ========================================================================================
 
     def stop(self):
         self.robot.emergency_stop()
+
+    # ========================================================================================
+    
+    def _check_position(self, obs, xlim=[0.4, 0.8], ylim=[-0.2, 0.2], zlim=[0.32, 0.45]):
+        pos = obs['state']["tcp_pos"]
+
+        return pos[0] >= xlim[0] and pos[0] <= xlim[1] and \
+                pos[1] >= ylim[0] and pos[1] <= ylim[1] and \
+                pos[2] >= zlim[0] and pos[2] <= zlim[1]
+    
+    # ========================================================================================
+
+    def _pre_step(self, action, info):
+
+        if self.teleop_set:
+            success, message = self._read_teleop()
+
+            if success:
+                if self.teleop_gripper_flag:
+                    message[3] = self.teleop_gripper_state
+
+                action = message[0:4]*self.action_scale
+                info["intervene_action"] = action
+            
+            self.teleop_gripper_flag = False
+
+        action = np.asarray(action, dtype=np.float32)/self.action_scale
+        action[3] = action[3]*self.action_scale
+
+        return action, info
+    
+    # ========================================================================================
+
+    def _get_reward(self, obs):
+        if self.reward_model is not None:
+            img_dict = {k: obs["images"][k] for k in self.image_keys}
+            score = self.reward_model(img_dict)
+            reward = round(score)
+        else:
+            reward = 0.0
+
+        return reward
+
+    # ========================================================================================
+
+    def _get_dones(self, reward, obs, info):
+
+        terminated = bool(reward > 0.95)
+        if terminated: info["succeed"] = True
+
+        if self.done:
+            terminated = True
+            info["succeed"] = True
+            self.done = False
+        else:
+            if not self._check_position(obs=obs):
+                terminated = True
+                reward = -3
+
+        truncated = (self._t >= self._max_ep_steps)
+        if truncated: reward = -1
+        self.last_obs = obs
+        self._t += 1
+
+        return reward, terminated, truncated, info

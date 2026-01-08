@@ -7,12 +7,13 @@ import socket
 import time
 import cv2
 
-cameras = {"cam_front": Camera(0)}
-adapter = RobotAdapter(own_ip="127.0.0.1", own_port=8084, robot_ip="127.0.0.1", robot_port=8080, cameras=cameras, image_keys=["cam_front"])
+cameras = {"cam_front": Camera(2)}
+time.sleep(1)
 
-env = RealRobotEnv(robot_adapter=adapter, image_keys=["cam_front"], teleop_set=True)
+adapter = RobotAdapter(own_ip="127.0.0.1", own_port=8082, robot_ip="127.0.0.1", robot_port=8081, cameras=cameras, image_keys=["cam_front"])
+env = RealRobotEnv(robot_adapter=adapter, image_keys=["cam_front"], teleop_set=True, teleop_ip="127.0.0.1", teleop_port=8083)
 
-delta_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+delta_pos = np.array([0.0, 0.0, 0.0, 0.0])
 
 last_obs, info = env.reset()
 
@@ -39,13 +40,14 @@ while True:
     if terminated:
         env.reset()
 
-    print(reward)
-    print(obs["state"]["tcp_pos"])
+    # print(reward)
+    print("Tcp_pos", obs["state"]["tcp_pos"])
+    print("Reward", reward)
 
     i += 1
 
     # time.sleep(0.01)
-    cv2.waitKey(1) 
+    cv2.waitKey(1)
 
 last_obs, info = env.reset()
 

@@ -25,11 +25,22 @@ class RobotAdapter:
         self.gripper.send(0)
 
         self.pos, self.orient = self.robot_socket.readState()
+        self.prev_pos = self.pos.copy()
 
         self.robot_socket.sendCommand(self.pos.copy(), self.orient.copy())
 
-        self.start_pos = self.pos.copy()
-        self.start_orient = self.orient.copy()
+        self.start_pos = np.array([0.6, 0.0, 0.4])
+        # self.start_orient = np.array([[0.635366, 0.0545912, 0.770279],
+        #                                 [0.0855156, -0.996337, 0.0],
+        #                                 [0.767461, 0.0658235, -0.637707]])
+        
+        # self.start_orient = np.array([[0.5, 0.0, 0.866],
+        #                             [0.0, -1.0, 0.0],
+        #                             [0.866, 0.0, -0.5]])
+        
+        self.start_orient = np.array([[-1.0, 0.0, 0.0,],
+                                    [0.0, 1.0, 0.0,],
+                                    [0.0, 0.0, -1.0]])
 
     # ====================================================================================================
 
@@ -42,7 +53,8 @@ class RobotAdapter:
         vel = pos - self.prev_pos
         self.prev_pos = pos
 
-        pos_obs = pos - self.start_pos
+        # pos_obs = pos - self.start_pos
+        pos_obs = pos
 
         return Obs(imgs, pos_obs, vel, time.time())
 
@@ -65,12 +77,17 @@ class RobotAdapter:
         self.reset_pos = self.start_pos.copy()
         self.reset_pos[0:3] += np.random.uniform(-0.03, 0.03, size=3)
 
-        self.robot_socket.sendCommand(self.reset_pos.copy(), self.orient.copy())
+        self.reset_orient = self.start_orient.copy()
 
-        self.pos = self.reset_pos.copy()
+        self.robot_socket.sendCommand(self.reset_pos.copy(), self.reset_orient.copy())
+
+        # self.pos = self.reset_pos.copy()
+        # self.orient = self.reset_orient.copy()
 
         while not self._check_reset():
             time.sleep(0.001)
+
+        self.pos, self.orient = self.robot_socket.readState()
     
     # ====================================================================================================
 
@@ -78,7 +95,7 @@ class RobotAdapter:
 
         pos, orient = self.robot_socket.readState()
 
-        if (np.abs(self.reset_pos - pos[0:3]) >= 0.002).any():
+        if (np.abs(self.reset_pos - pos[0:3]) >= 0.02).any():
             print(np.abs(self.reset_pos - pos[0:3]))
             return False
         else:

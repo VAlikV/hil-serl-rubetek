@@ -36,4 +36,22 @@ class RobotSocket:
 
         command = np.concatenate([pos, orient[0], orient[1], orient[2]])
 
-        self.robot_socket.sendto(command, (self.robot_ip, self.robot_port))
+        # command = str(command).replace("", ",")
+        # print(command)
+
+        command = self.toJSONstr(command)
+
+        self.robot_socket.sendto(command.encode("utf-8"), (self.robot_ip, self.robot_port))
+
+
+    def toJSONstr(self, command):
+
+        msg = "[" + str(command[0])
+
+        for i in range(1, len(command)):
+            msg += ","
+            msg += str(command[i])
+
+        msg += "]"
+
+        return msg
