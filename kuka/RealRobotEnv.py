@@ -214,6 +214,7 @@ class RealRobotEnv(gym.Env):
                     message[3] = self.teleop_gripper_state
 
                 action = message[0:4]*self.action_scale
+                action[3] = action[3]/self.action_scale
                 info["intervene_action"] = action
             
             self.teleop_gripper_flag = False
