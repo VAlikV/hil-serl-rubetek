@@ -1,15 +1,15 @@
 from kuka.RobotAdapter import RobotAdapter
 from kuka.Camera import Camera
 from kuka.RealRobotEnv import RealRobotEnv
+from kuka.RealRobotEnv import GripperPenaltyWrapper
 from kuka.VisualReward import VisualReward
-
 
 import numpy as np
 import socket
 import time
 import cv2
 
-cameras = {"cam_front": Camera(4), "cam_side": Camera(2)}
+cameras = {"cam_front": Camera(2), "cam_side": Camera(4)}
 
 time.sleep(3)
 
@@ -34,7 +34,9 @@ env = RealRobotEnv(robot_adapter=adapter,
                     reward_model=reward_model,
                     classifier_keys=["cam_front", "cam_side"])
 
-delta_pos = np.array([0.0, 0.0, 0.0, 0.0])
+# env = GripperPenaltyWrapper(env)
+
+delta_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
 last_obs, info = env.reset()
 
@@ -62,13 +64,16 @@ while True:
 
     if terminated:
         env.reset()
+        # print("AAAA")
 
     # print(reward)
-    print("Tcp_pos", obs["state"]["tcp_pos"])
-    print("Reward", reward)
+    # print(obs["state"]["gripper_state"])
+    # print("Tcp_pos", obs["state"]["tcp_pos"])
+    # print("Penalty", info["grasp_penalty"])
+    # print("Reward", reward)
 
-    i += 1
-
+    # i += 1
+    # print(i)
     # time.sleep(0.01)
     cv2.waitKey(1)
 

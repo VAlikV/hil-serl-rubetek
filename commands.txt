@@ -10,3 +10,20 @@ python examples/train_rlpd.py \
   --actor True\
   --ip=192.168.68.189
   --checkpoint_path=checkpoints/rozum_push \
+
+// ============================================================
+
+  python examples/train_rlpd.py \
+  --exp_name=kuka_pinhole \
+  --learner True\
+  --checkpoint_path=checkpoints/kuka_pinhole \
+  --demo_path=demo_data/demo2.pkl \
+  --fake_env=True
+
+python examples/train_rlpd.py \
+  --exp_name=kuka_pinhole \
+  --actor True\
+  --ip=192.168.31.57
+  --checkpoint_path=checkpoints/kuka_pinhole \
+
+XLA_FLAGS="--xla_gpu_autotune_level=0 --xla_gpu_enable_triton_gemm=false"

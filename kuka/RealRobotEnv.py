@@ -29,8 +29,10 @@ class RealRobotEnv(gym.Env):
         self.reward_model = reward_model
 
         if enable_keyboard_listener:
-            listener = keyboard.Listener(on_press=self._on_press,)
+            listener = keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
             listener.start()
+
+        self.pressed = set()
 
         self.done = False
         self.gripper_state = 1
@@ -38,10 +40,11 @@ class RealRobotEnv(gym.Env):
         self.teleop_gripper_flag = False
 
         self.action_scale = 100
-        self.action_space = gym.spaces.Box(low=np.array([-1.0]*4, dtype=np.float32),
-                                           high=np.array([+1.0]*4, dtype=np.float32),
+        self.action_space = gym.spaces.Box(low=np.array([-1.0]*7, dtype=np.float32),
+                                           high=np.array([+1.0]*7, dtype=np.float32),
                                            dtype=np.float32)
-
+        
+        self.obs_scale = 100.0
         # H, W = 360, 480
         H, W = 128, 128
         self.observation_space = gym.spaces.Dict(
@@ -84,8 +87,8 @@ class RealRobotEnv(gym.Env):
 
     def _obs_from_robot(self, o):
         
-        proprio = {"tcp_pos": o.tcp_pos,
-                   "tcp_vel": o.tcp_vel,
+        proprio = {"tcp_pos": o.tcp_pos*self.obs_scale,
+                   "tcp_vel": o.tcp_vel*self.obs_scale,
                    "gripper_state":self.gripper_state}
 
         imgs = {k: o.images[k] for k in self.image_keys}
@@ -115,15 +118,20 @@ class RealRobotEnv(gym.Env):
 
     def step(self, action):
 
+        self._check_keyboard()
+
         start_time = time.time()
+
+        action = np.clip(action, self.action_space.low, self.action_space.high)
         act = action.copy()
+
         info = {}
 
         # -----------------------------
 
         act, info = self._pre_step(act, info)
 
-        self.gripper_state = act[3]
+        self.gripper_state = act[6]
         self.robot.apply_action(act[0:3], self.gripper_state)
 
         # -----------------------------
@@ -134,11 +142,11 @@ class RealRobotEnv(gym.Env):
         # -----------------------------
 
         reward = self._get_reward(obs)
-
         reward, terminated, truncated, info = self._get_dones(reward, obs, info)
 
         # -----------------------------
 
+        # print("Action: ", act[0:4])
         dt = time.time() - start_time
         time.sleep(max(0, (1.0 / self.hz) - dt))
         
@@ -155,9 +163,8 @@ class RealRobotEnv(gym.Env):
         try:
             data, addr = self.haptic_sock.recvfrom(1024)
             message = np.array(list(map(float, data.decode()[1:-1].split(","))))
-            # message = np.append(message, self.teleop_gripper_state)
 
-            print("Message: ", message)
+            print("Teleop")
             if len(message):
                 if self.first:
                     self.last_pos = message
@@ -177,17 +184,34 @@ class RealRobotEnv(gym.Env):
     def _on_press(self, key):
 
         if hasattr(key, "char"):
-            if key.char == 'o':
-                self.teleop_gripper_state = 1
-                self.teleop_gripper_flag = True
-            
-            if key.char == "c":
-                self.teleop_gripper_state = -1
-                self.teleop_gripper_flag = True
+            self.pressed.add(key.char)
         else:
-            if key == keyboard.Key.shift:
-                self.done = True
+            self.pressed.add(key)
         
+    # ========================================================================================
+    
+    def _check_keyboard(self):
+
+        if 'o' in self.pressed:
+            self.teleop_gripper_flag = True
+            self.teleop_gripper_state = 1
+        
+        if "c" in self.pressed:
+            self.teleop_gripper_flag = True
+            self.teleop_gripper_state = -1
+
+        if keyboard.Key.shift in self.pressed:
+            self.done = True
+
+    # ========================================================================================
+
+    def _on_release(self, key):
+
+        if hasattr(key, "char"):
+            self.pressed.discard(key.char)
+        else:
+            self.pressed.discard(key)
+
     # ========================================================================================
 
     def stop(self):
@@ -195,8 +219,8 @@ class RealRobotEnv(gym.Env):
 
     # ========================================================================================
     
-    def _check_position(self, obs, xlim=[0.4, 0.8], ylim=[-0.2, 0.2], zlim=[0.32, 0.45]):
-        pos = obs['state']["tcp_pos"]
+    def _check_position(self, obs, xlim=[-0.1, 0.2], ylim=[-0.2, 0.2], zlim=[-0.08, 0.05]):
+        pos = obs['state']["tcp_pos"]/self.obs_scale
 
         return pos[0] >= xlim[0] and pos[0] <= xlim[1] and \
                 pos[1] >= ylim[0] and pos[1] <= ylim[1] and \
@@ -210,17 +234,19 @@ class RealRobotEnv(gym.Env):
             success, message = self._read_teleop()
 
             if success:
+                message[6] = self.gripper_state
                 if self.teleop_gripper_flag:
-                    message[3] = self.teleop_gripper_state
+                    message[6] = self.teleop_gripper_state
 
-                action = message[0:4]*self.action_scale
-                action[3] = action[3]/self.action_scale
+                message[3:6] = 0.0
+                action = message[0:7]*self.action_scale
+                action[6] = action[6]/self.action_scale
                 info["intervene_action"] = action
             
             self.teleop_gripper_flag = False
 
-        action = np.asarray(action, dtype=np.float32)/self.action_scale
-        action[3] = action[3]*self.action_scale
+        action = np.asarray(action, dtype=np.float32)
+        action[0:6] = action[0:6]/self.action_scale
 
         return action, info
     
@@ -250,11 +276,46 @@ class RealRobotEnv(gym.Env):
         else:
             if not self._check_position(obs=obs):
                 terminated = True
-                reward = -3
+                # reward = -3
 
         truncated = (self._t >= self._max_ep_steps)
-        if truncated: reward = -1
+        # if truncated: reward = -1
         self.last_obs = obs
         self._t += 1
 
         return reward, terminated, truncated, info
+    
+
+# ========================================================================================
+# ========================================================================================
+# ========================================================================================
+
+
+class GripperPenaltyWrapper(gym.Wrapper):
+    def __init__(self, env, penalty=-0.05):
+        super().__init__(env)
+        assert env.action_space.shape == (7,)
+        self.penalty = penalty
+        self.last_gripper_pos = None
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        print(obs["state"])
+        self.last_gripper_pos = obs["state"][0, 0]
+        return obs, info
+
+    def step(self, action):
+        """Modifies the :attr:`env` :meth:`step` reward using :meth:`self.reward`."""
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        if "intervene_action" in info:
+            action = info["intervene_action"]
+
+        if (action[-1] < 0.5 and self.last_gripper_pos > 0.9) or (
+            action[-1] > 0.5 and self.last_gripper_pos < 0.9
+        ):
+            info["grasp_penalty"] = self.penalty
+        else:
+            info["grasp_penalty"] = 0.0
+
+        self.last_gripper_pos = observation["state"][0, 0]
+        return observation, reward, terminated, truncated, info

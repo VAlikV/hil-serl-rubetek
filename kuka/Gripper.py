@@ -6,8 +6,8 @@ class Gripper:
         self._serial = serial.Serial(device, boudrate, timeout=timeout)
 
     def send(self, state):
-        '''<0 - close, >1 - open'''
-        if state <= 0:
+        '''<0 - close, >0 - open'''
+        if state < 0:
             self._serial.write(b'Close\n')
         else: 
             self._serial.write(b'Open\n')

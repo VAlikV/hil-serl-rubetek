@@ -1,6 +1,7 @@
 from kuka.RobotAdapter import RobotAdapter
 from kuka.Camera import Camera
 from kuka.RealRobotEnv import RealRobotEnv
+from kuka.RealRobotEnv import GripperPenaltyWrapper
 from kuka.VisualReward import VisualReward
 import numpy as np
 import time
@@ -54,6 +55,7 @@ class KukaPinHoleConfig(DefaultTrainingConfig):
             
             env = SERLObsWrapper(env, proprio_keys=self.proprio_keys)
             env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+            env = GripperPenaltyWrapper(env)
 
         else:
             env = RealRobotEnv(robot_adapter=None, 
@@ -62,5 +64,6 @@ class KukaPinHoleConfig(DefaultTrainingConfig):
             
             env = SERLObsWrapper(env, proprio_keys=self.proprio_keys)
             env = ChunkingWrapper(env, obs_horizon=1, act_exec_horizon=None)
+            env = GripperPenaltyWrapper(env)
 
         return env

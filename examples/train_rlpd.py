@@ -491,29 +491,30 @@ def main():
         print_green(f"online buffer size: {len(replay_buffer)}")
 
         ###############################################
-        #  BC WARM-UP: обучаем политику на демонстрациях
+        #  BC WARM-UP
         ###############################################
-        print_green("Starting BC warm-up...")
+        # print_green("Starting BC warm-up...")
 
-        demo_iterator_bc = demo_buffer.get_iterator(
-            sample_args={
-                "batch_size": config.batch_size,
-                "pack_obs_and_next_obs": True,
-            },
-            device=sharding.replicate(),
-        )
+        # demo_iterator_bc = demo_buffer.get_iterator(
+        #     sample_args={
+        #         "batch_size": config.batch_size,
+        #         "pack_obs_and_next_obs": True,
+        #     },
+        #     device=sharding.replicate(),
+        # )
 
-        BC_STEPS = 1000
+        # BC_STEPS = 100
 
-        for i in tqdm.tqdm(range(BC_STEPS), desc="BC warm-up"):
-            batch = next(demo_iterator_bc)
+        # for i in tqdm.tqdm(range(BC_STEPS), desc="BC warm-up"):
+        #     batch = next(demo_iterator_bc)
 
-            agent, update_info = agent.update(
-                batch,
-                networks_to_update=frozenset({"actor"})
-            )
+        #     agent, update_info = agent.update(
+        #         batch,
+        #         # networks_to_update=frozenset({"actor"})
+        #         networks_to_update=frozenset({"critic", "grasp_critic"})
+        #     )
 
-        print_green("Finished BC warm-up!")
+        # print_green("Finished BC warm-up!")
         ###############################################
 
         if FLAGS.checkpoint_path is not None and os.path.exists(
