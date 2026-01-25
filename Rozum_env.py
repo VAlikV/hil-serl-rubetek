@@ -1,0 +1,95 @@
+from rozum.RobotAdapter import RobotAdapter
+from rozum.Camera import Camera
+from rozum.RealRobotEnv import RealRobotEnv
+from rozum.RealRobotEnv import GripperPenaltyWrapper
+from rozum.VisualReward import VisualReward
+from API.controller import TaskSpaceJogController
+
+import numpy as np
+import socket
+import time
+import cv2
+
+cameras = {"cam_front": Camera(2), "cam_side": Camera(4)}
+
+time.sleep(3)
+
+sample_obs = {
+                k: np.zeros((1, 128, 128, 3), np.uint8) for k in ["cam_front", "cam_side"]
+            }
+
+reward_model = VisualReward(
+                    ckpt_dir="/home/valikv/Desktop/Robotics/hil-serl-rubetek/classifier_ckpt",
+                    sample_observations=sample_obs,
+                    classifier_keys=["cam_front", "cam_side"],
+                )
+
+robot = TaskSpaceJogController(ip="10.10.10.10",
+                                            rate_hz=100,
+                                            velocity=1,
+                                            acceleration=1,
+                                            treshold_position=0.001,
+                                            treshold_angel=1)
+adapter = RobotAdapter(robot=robot, cameras=cameras, image_keys=["cam_front","cam_side"])
+
+env = RealRobotEnv(robot_adapter=adapter, 
+                    image_keys=["cam_front", "cam_side"], 
+                    fake_env=False,
+                    teleop_set=True, 
+                    teleop_ip="127.0.0.1", 
+                    teleop_port=8081, 
+                    reward_model=reward_model, 
+                    classifier_keys=["cam_front", "cam_side"])
+# env = GripperPenaltyWrapper(env)
+
+delta_pos = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+last_obs, info = env.reset()
+
+i = 0
+T = 1000
+
+while True:
+
+    # delta_pos[0] = np.sign(np.sin(2*np.pi*i/T))/1000
+    # t = time.time()
+    obs, reward, terminated, truncated, info = env.step(delta_pos)
+    # print((time.time()-t)*1000)
+    # delta_pos = np.array([0.0, 0.0, 0.0])
+
+    # print(obs)
+
+    image_1 = obs["images"]["cam_front"]
+    image_2 = obs["images"]["cam_side"]
+
+    # image_1 = cv2.resize(image_1, (118, 118))
+    # image_2 = cv2.resize(image_2, (118, 118))
+
+    cv2.imshow("cam_front", image_1)
+    cv2.imshow("cam_side", image_2)
+
+    if terminated:
+        env.reset()
+        # print("AAAA")
+
+    # print(reward)
+    # print(obs["state"]["gripper_state"])
+    # print("Tcp_pos", obs["state"]["tcp_pos"])
+    # print("Penalty", info["grasp_penalty"])
+    # print("Reward", reward)
+
+    # i += 1
+    # print(i)
+    # time.sleep(0.01)
+    cv2.waitKey(1)
+
+last_obs, info = env.reset()
+
+print(last_obs)
+
+while True:
+    time.sleep(0.01)
+
+
+
+

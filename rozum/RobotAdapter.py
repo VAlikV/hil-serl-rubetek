@@ -45,7 +45,7 @@ class RobotAdapter:
     def apply_action(self, delta, a_gripper):
 
         # if delta[0:3].any() >= 0.0001:
-        self.pos[0:2] += delta[0:2]
+        self.pos[0:3] += delta[0:3]
         self.ctrl.set_target(self.pos.copy(), self.orient.copy())
         # self.ctrl.step()
         # self.ctrl.set_gripper_cmd(a_gripper)
